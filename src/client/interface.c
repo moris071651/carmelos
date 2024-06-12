@@ -1,11 +1,14 @@
 #include "interface.h"
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <ncurses.h>
 
 #include "talk.h"
+#include "fuzzy.h"
+
 #include "types.h"
 
 #define CTRL(x) ((x) & 0x1f)
@@ -22,6 +25,10 @@
 #define TREE_VIEW_MAX_WIDTH 50
 #endif
 
+#ifndef TREE_VIEW_SEARCH_PROMPT
+#define TREE_VIEW_SEARCH_PROMPT "SEARCH:"
+#endif
+
 WINDOW* tree_area = NULL;
 WINDOW* editor_area = NULL;
 
@@ -30,6 +37,9 @@ size_t tree_select = 0;
 
 size_t tree_items_size = 0;
 tree_item_t* tree_items = NULL;
+
+size_t tree_items_size_old = 0;
+tree_item_t* tree_items_old = NULL;
 
 bool tree_need_redraw = false;
 bool editor_need_redraw = false;
@@ -124,6 +134,44 @@ int sort_date_rev(const void* p1, const void* p2) {
     return (a->date < b->date);
 }
 
+static void tree_filter_items(const char* query) {
+    if (tree_items_old) {
+        free(tree_items);
+
+        tree_items = tree_items_old;
+        tree_items_size = tree_items_size_old;
+
+        tree_items_old = NULL;
+        tree_items_size_old = 0;
+
+    }
+
+    tree_item_t* filtered = malloc(tree_items_size * sizeof(tree_item_t));
+    if (!filtered) {
+        // TODO: BETTER LOGGING
+        exit(EXIT_FAILURE);
+    }
+
+    size_t size = 0;
+    for (size_t i = 0; i < tree_items_size; i++) {
+        if (fuzzy_search(query ,tree_items[i].name)) {
+            filtered[size++] = tree_items[i];
+        }
+    }
+
+    filtered = realloc(filtered, size * sizeof(tree_item_t));
+    if (!filtered) {
+        // TODO: BETTER LOGGING
+        exit(EXIT_FAILURE);
+    }
+
+    tree_items_old = tree_items;
+    tree_items_size_old = tree_items_size;
+
+    tree_items = filtered;
+    tree_items_size = size;
+}
+
 static void handle_resize(void) {
     size_t maxx = getmaxx(stdscr);
     size_t maxy = getmaxy(stdscr);
@@ -143,6 +191,73 @@ static void handle_resize(void) {
     wclear(editor_area);
     mvwin(editor_area, 0, width);
     wresize(editor_area, maxy, maxx - width);
+}
+
+char* tree_search_prompt() {
+    size_t maxx = getmaxx(stdscr);
+    size_t maxy = getmaxy(stdscr);
+
+    WINDOW* win = newwin(3, maxx * 0.8, (maxy - 3) / 2, maxx * 0.1);
+    box(win, 0, 0);
+    wrefresh(win);
+    wrefresh(stdscr);
+
+    mvwprintw(win, 1, 1, "%s", TREE_VIEW_SEARCH_PROMPT);
+
+    char* buffer = malloc(256 * sizeof(char));
+    size_t size = 0;
+
+    while (true) {
+        int input = wgetch(win);
+
+        if (input == 10) {
+            break;
+        }
+        else if (input == 27) {
+            free(buffer);
+            buffer = NULL;
+            break;
+        }
+        else if (input == KEY_BACKSPACE || input == KEY_DC || input == 127) {
+            if (size == 0) {
+                continue;
+            }
+
+            size--;
+            buffer[size] = '\0';
+        }
+        else if (isprint(input)) {
+            size++;
+            if (size >= 256) {
+                size = 255;
+                continue;
+            }
+
+            buffer[size - 1] = input;
+            buffer[size] = '\0';
+        }
+        else {
+            continue;
+        }
+
+        size_t width = getmaxx(win) - 2;
+        width -= sizeof(TREE_VIEW_SEARCH_PROMPT);
+
+        wclear(win);
+        mvwprintw(win, 1, 1, "%s %s", TREE_VIEW_SEARCH_PROMPT, buffer + (size > width ? size - width : 0));
+        box(win, 0, 0);
+        wrefresh(win);
+    }
+
+    wclear(win);
+    delwin(win);
+
+    if (size == 0) {
+        free(buffer);
+        buffer = NULL;
+    }
+
+    return buffer;
 }
 
 static void handle_tree_keys(int input) {
@@ -188,6 +303,25 @@ static void handle_tree_keys(int input) {
     }
     else if (input == KEY_F(4)) {
         qsort(tree_items, tree_items_size, sizeof(tree_item_t), sort_date_rev);
+    }
+    else if (input == CTRL('f')) {
+        char* query = tree_search_prompt();
+
+        if (query) {
+            tree_filter_items(query);
+            free(query);
+        }
+
+        wclear(tree_area);
+    }
+    else if (input == CTRL('l')) {
+        free(tree_items);
+
+        tree_items = tree_items_old;
+        tree_items_size = tree_items_size_old;
+
+        tree_items_old = NULL;
+        tree_items_size_old = 0;
     }
     else {
         tree_need_redraw = false;
