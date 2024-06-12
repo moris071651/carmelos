@@ -31,6 +31,7 @@ static void pad_data(unsigned char *data, unsigned int data_len) {
     for (int i = 0; i < padding_len; i++) {
         data[data_len + i] = padding;
     }
+    data[data_len + padding_len] = '\0';
 }
 
 //key operations and expansions
@@ -50,7 +51,7 @@ static void SubWord(unsigned char *word, unsigned char *sbox) {
 }
 
 static void Rcon(unsigned char *word, int i) {
-    word[0] ^= (unsigned char)(pow(2, i - 1));
+    word[0] ^= (unsigned char)(0x01 << (i - 1));
 }
 
 static void KeyExpansion(unsigned char *key, unsigned char *expanded_key, unsigned char *sbox) {
@@ -88,6 +89,7 @@ static void convert_to_16b(unsigned char *key, size_t key_len, unsigned int coun
             key[i] = (unsigned char)(rand() % 256);
         }
     }
+    key[16] = '\0';
 
 }
 
@@ -104,6 +106,66 @@ static void generate_sbox(unsigned char *sbox, unsigned char *key) {
     }
 }
 
+static void geneate_inv_sbox(unsigned char *sbox, unsigned char *inv_sbox) {
+    for (int i = 0; i < 256; i++) {
+        inv_sbox[sbox[i]] = (unsigned char)i;
+    }
+}
+
+static void generate_mix_matrix(unsigned char mix_matrix[4][4]) {
+    mix_matrix[0][0] = 0x02;
+    mix_matrix[0][1] = 0x03;
+    mix_matrix[0][2] = 0x01;
+    mix_matrix[0][3] = 0x01;
+    mix_matrix[1][0] = 0x01;
+    mix_matrix[1][1] = 0x02;
+    mix_matrix[1][2] = 0x03;
+    mix_matrix[1][3] = 0x01;
+    mix_matrix[2][0] = 0x01;
+    mix_matrix[2][1] = 0x01;
+    mix_matrix[2][2] = 0x02;
+    mix_matrix[2][3] = 0x03;
+    mix_matrix[3][0] = 0x03;
+    mix_matrix[3][1] = 0x01;
+    mix_matrix[3][2] = 0x01;
+    mix_matrix[3][3] = 0x02;
+}
+
+static void generate_inv_mix_matrix(unsigned char inv_mix_matrix[4][4]) {
+    inv_mix_matrix[0][0] = 0x0e;
+    inv_mix_matrix[0][1] = 0x0b;
+    inv_mix_matrix[0][2] = 0x0d;
+    inv_mix_matrix[0][3] = 0x09;
+    inv_mix_matrix[1][0] = 0x09;
+    inv_mix_matrix[1][1] = 0x0e;
+    inv_mix_matrix[1][2] = 0x0b;
+    inv_mix_matrix[1][3] = 0x0d;
+    inv_mix_matrix[2][0] = 0x0d;
+    inv_mix_matrix[2][1] = 0x09;
+    inv_mix_matrix[2][2] = 0x0e;
+    inv_mix_matrix[2][3] = 0x0b;
+    inv_mix_matrix[3][0] = 0x0b;
+    inv_mix_matrix[3][1] = 0x0d;
+    inv_mix_matrix[3][2] = 0x09;
+    inv_mix_matrix[3][3] = 0x0e;
+}
+
+unsigned char gal_mul(unsigned char a, unsigned char b) {
+    unsigned char p = 0;
+    for (int i = 0; i < 8; i++) {
+        if (b & 1) {
+            p ^= a;
+        }
+        unsigned char carry = a & 0x80;
+        a <<= 1;
+        if (carry) {
+            a ^= 0x1b;
+        }
+        b >>= 1;
+    }
+    return p;
+}
+
 static void shift_rows(unsigned char data_matrix[4][4]) {
     for (int i = 1; i < 4; i++) {
         for (int j = 0; j < i; j++) {
@@ -118,11 +180,13 @@ static void shift_rows(unsigned char data_matrix[4][4]) {
 
 static void mix_columns(unsigned char data_matrix[4][4]) {
     unsigned char temp_matrix[4][4];
+    unsigned char mix_matrix[4][4];
+    generate_mix_matrix(mix_matrix);
     for (int i = 0; i < 4; i++) {
-        temp_matrix[0][i] = (unsigned char)(2 * data_matrix[0][i] ^ 3 * data_matrix[1][i] ^ data_matrix[2][i] ^ data_matrix[3][i]);
-        temp_matrix[1][i] = (unsigned char)(data_matrix[0][i] ^ 2 * data_matrix[1][i] ^ 3 * data_matrix[2][i] ^ data_matrix[3][i]);
-        temp_matrix[2][i] = (unsigned char)(data_matrix[0][i] ^ data_matrix[1][i] ^ 2 * data_matrix[2][i] ^ 3 * data_matrix[3][i]);
-        temp_matrix[3][i] = (unsigned char)(3 * data_matrix[0][i] ^ data_matrix[1][i] ^ data_matrix[2][i] ^ 2 * data_matrix[3][i]);
+        temp_matrix[0][i] = (unsigned char)(gal_mul(mix_matrix[0][0], data_matrix[0][i]) ^ gal_mul(mix_matrix[0][1], data_matrix[1][i]) ^ gal_mul(mix_matrix[0][2], data_matrix[2][i]) ^ gal_mul(mix_matrix[0][3], data_matrix[3][i]));
+        temp_matrix[1][i] = (unsigned char)(gal_mul(mix_matrix[1][0], data_matrix[0][i]) ^ gal_mul(mix_matrix[1][1], data_matrix[1][i]) ^ gal_mul(mix_matrix[1][2], data_matrix[2][i]) ^ gal_mul(mix_matrix[1][3], data_matrix[3][i]));
+        temp_matrix[2][i] = (unsigned char)(gal_mul(mix_matrix[2][0], data_matrix[0][i]) ^ gal_mul(mix_matrix[2][1], data_matrix[1][i]) ^ gal_mul(mix_matrix[2][2], data_matrix[2][i]) ^ gal_mul(mix_matrix[2][3], data_matrix[3][i]));
+        temp_matrix[3][i] = (unsigned char)(gal_mul(mix_matrix[3][0], data_matrix[0][i]) ^ gal_mul(mix_matrix[3][1], data_matrix[1][i]) ^ gal_mul(mix_matrix[3][2], data_matrix[2][i]) ^ gal_mul(mix_matrix[3][3], data_matrix[3][i]));
     }
     memcpy(data_matrix, temp_matrix, 16);
 }
@@ -143,11 +207,13 @@ static void inv_shift_rows(unsigned char data_matrix[4][4]) {
 
 static void inv_mix_columns(unsigned char data_matrix[4][4]) {
     unsigned char temp_matrix[4][4];
+    unsigned char inv_mix_matrix[4][4];
+    generate_inv_mix_matrix(inv_mix_matrix);
     for (int i = 0; i < 4; i++) {
-        temp_matrix[0][i] = (unsigned char)(0x0e * data_matrix[0][i] ^ 0x0b * data_matrix[1][i] ^ 0x0d * data_matrix[2][i] ^ 0x09 * data_matrix[3][i]);
-        temp_matrix[1][i] = (unsigned char)(0x09 * data_matrix[0][i] ^ 0x0e * data_matrix[1][i] ^ 0x0b * data_matrix[2][i] ^ 0x0d * data_matrix[3][i]);
-        temp_matrix[2][i] = (unsigned char)(0x0d * data_matrix[0][i] ^ 0x09 * data_matrix[1][i] ^ 0x0e * data_matrix[2][i] ^ 0x0b * data_matrix[3][i]);
-        temp_matrix[3][i] = (unsigned char)(0x0b * data_matrix[0][i] ^ 0x0d * data_matrix[1][i] ^ 0x09 * data_matrix[2][i] ^ 0x0e * data_matrix[3][i]);
+        temp_matrix[0][i] = (unsigned char)(gal_mul(inv_mix_matrix[0][0], data_matrix[0][i]) ^ gal_mul(inv_mix_matrix[0][1], data_matrix[1][i]) ^ gal_mul(inv_mix_matrix[0][2], data_matrix[2][i]) ^ gal_mul(inv_mix_matrix[0][3], data_matrix[3][i]));
+        temp_matrix[1][i] = (unsigned char)(gal_mul(inv_mix_matrix[1][0], data_matrix[0][i]) ^ gal_mul(inv_mix_matrix[1][1], data_matrix[1][i]) ^ gal_mul(inv_mix_matrix[1][2], data_matrix[2][i]) ^ gal_mul(inv_mix_matrix[1][3], data_matrix[3][i]));
+        temp_matrix[2][i] = (unsigned char)(gal_mul(inv_mix_matrix[2][0], data_matrix[0][i]) ^ gal_mul(inv_mix_matrix[2][1], data_matrix[1][i]) ^ gal_mul(inv_mix_matrix[2][2], data_matrix[2][i]) ^ gal_mul(inv_mix_matrix[2][3], data_matrix[3][i]));
+        temp_matrix[3][i] = (unsigned char)(gal_mul(inv_mix_matrix[3][0], data_matrix[0][i]) ^ gal_mul(inv_mix_matrix[3][1], data_matrix[1][i]) ^ gal_mul(inv_mix_matrix[3][2], data_matrix[2][i]) ^ gal_mul(inv_mix_matrix[3][3], data_matrix[3][i]));
     }
     memcpy(data_matrix, temp_matrix, 16);
 }
@@ -159,9 +225,13 @@ static void remove_padding(unsigned char *data, unsigned int data_len) {
     }
 }
 
-static void inv_sub_bytes(unsigned char *data, unsigned char *sbox) {
-    for (int i = 0; i < 16; i++) {
-        data[i] = sbox[data[i]];
+static void inv_sub_bytes(unsigned char data_matrix[4][4], unsigned char *sbox) {
+    unsigned char inv_sbox[256];
+    geneate_inv_sbox(sbox, inv_sbox);
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            data_matrix[i][j] = inv_sbox[data_matrix[i][j]];
+        }
     }
 }
 
@@ -254,6 +324,8 @@ static void AES_Decrypt(unsigned char *data, unsigned char *key) {
 
     inv_shift_rows(data_matrix);
 
+    inv_sub_bytes(data_matrix, sbox);
+
     for (int i = 1; i < 10; i++) {
 
         generate_matrix(expanded_key + (10 - i) * 16, key_matrix);
@@ -266,13 +338,9 @@ static void AES_Decrypt(unsigned char *data, unsigned char *key) {
 
         inv_mix_columns(data_matrix);
 
-        for (int j = 0; j < 4; j++) {
-            for (int k = 0; k < 4; k++) {
-                data_matrix[j][k] = sbox[data_matrix[j][k]];
-            }
-        }
-
         inv_shift_rows(data_matrix);
+
+        inv_sub_bytes(data_matrix, sbox);
     }
 
     generate_matrix(expanded_key, key_matrix);
@@ -294,32 +362,42 @@ static void AES_Decrypt(unsigned char *data, unsigned char *key) {
 // we will have a function that sets up the needed data for the encryption
 
 void AES_PCBC_Setup(AES_PCBC *aes_pcbc, AES_PCBC_Data *key, AES_PCBC_Data *iv) {
-    convert_to_16b(key->data, key->data_len, 0);
-    count += 1;
-    convert_to_16b(iv->data, iv->data_len, count);
-    memcpy(aes_pcbc->key, key->data, 16);
-    memcpy(aes_pcbc->iv, iv->data, 16);
+    unsigned char key_copy[key->data_len + 1 < 17 ? 17 : key->data_len + 1];
+    strcpy(key_copy, key->data);
+    unsigned char iv_copy[iv->data_len + 1 < 17 ? 17 : iv->data_len + 1];
+    strcpy(iv_copy, iv->data);
+
+    convert_to_16b(key_copy, key->data_len, 0);
+    convert_to_16b(iv_copy, iv->data_len, count);
+    memcpy(aes_pcbc->key, key_copy, 17);
+    memcpy(aes_pcbc->iv, iv_copy, 17);
 }
 
 void AES_PCBC_Encrypt(AES_PCBC *aes_pcbc, unsigned char *data, unsigned int data_len) {
     unsigned char *iv = aes_pcbc->iv;
     unsigned char *key = aes_pcbc->key;
-    unsigned char iv_copy[16];
+    unsigned char iv_copy[17];
     memcpy(iv_copy, iv, 16);
-    unsigned char key_copy[16];
+    iv_copy[16] = '\0';
+    unsigned char key_copy[17];
     memcpy(key_copy, key, 16);
-    unsigned char data_copy[data_len];
+    key_copy[16] = '\0';
+    unsigned char data_copy[data_len + 1];
     memcpy(data_copy, data, data_len);
+    data_copy[data_len] = '\0';
     pad_data(data_copy, data_len);
     data_len += data_len % 16 == 0 ? 0 : 16 - (data_len % 16);
     unsigned int blocks = data_len / 16;
     for (int i = 0; i < blocks; i++) {
-        unsigned char temp[16];
+        unsigned char temp[17];
         memcpy(temp, data_copy + i * 16, 16);
+        temp[16] = '\0';
         xor_block(data_copy + i * 16, iv_copy);
+        //printf("Data: %s\n", data_copy);
         AES_Encrypt(data_copy + i * 16, key_copy);
         xor_block(temp, data_copy + i * 16);
         memcpy(iv_copy, temp, 16);
+        iv_copy[16] = '\0';
     }
     memcpy(data, data_copy, data_len);
 }
@@ -327,23 +405,125 @@ void AES_PCBC_Encrypt(AES_PCBC *aes_pcbc, unsigned char *data, unsigned int data
 void AES_PCBC_Decrypt(AES_PCBC *aes_pcbc, unsigned char *data, unsigned int data_len) {
     unsigned char *iv = aes_pcbc->iv;
     unsigned char *key = aes_pcbc->key;
-    unsigned char iv_copy[16];
+    unsigned char iv_copy[17];
     memcpy(iv_copy, iv, 16);
-    unsigned char key_copy[16];
+    iv_copy[16] = '\0';
+    unsigned char key_copy[17];
     memcpy(key_copy, key, 16);
-    unsigned char data_copy[data_len];
+    key_copy[16] = '\0';
+    unsigned char data_copy[data_len + 1];
     memcpy(data_copy, data, data_len);
+    data_copy[data_len] = '\0';
     unsigned int blocks = data_len / 16;
     for (int i = 0; i < blocks; i++) {
-        unsigned char temp[16];
+        unsigned char temp[17];
         memcpy(temp, data_copy + i * 16, 16);
+        temp[16] = '\0';
         AES_Decrypt(data_copy + i * 16, key_copy);
         xor_block(data_copy + i * 16, iv_copy);
         xor_block(temp, data_copy + i * 16);
         memcpy(iv_copy, temp, 16);
+        iv_copy[16] = '\0';
     }
     remove_padding(data_copy, data_len);
     memcpy(data, data_copy, data_len);
+}
+
+
+
+
+void Test_parts() {
+    //just for tests - UPDATE: If the encryption is broken it is not my fault, tested and fixed everything today
+    unsigned char key[17] = "1234567890123456";
+    unsigned char iv[17] = "1234567890123456";
+    unsigned char data[16] = "Hello, World!!!";
+    key[16] = '\0';
+    iv[16] = '\0';
+    data[15] = '\0';
+    unsigned int data_len = 15;
+    pad_data(data, data_len);
+    printf("Data: %s\n", data);
+    AES_Encrypt(data, key);
+    printf("Encrypted: %s\n", data);
+    AES_Decrypt(data, key);
+    printf("Decrypted: %s\n", data);
+
+    //test sbox
+    // unsigned char sbox[256];
+    // generate_sbox(sbox, key);
+    // unsigned char test[17] = "Hello, World!!!";
+    // test[16] = '\0';
+    // for(int i = 0; i < 15; i++) {
+    //     test[i] = sbox[test[i]];
+    // }
+    // printf("Sbox: %s\n", test);
+    // inv_sub_bytes(test, sbox);
+    // printf("Inv Sbox: %s\n", test);
+    //working
+
+    //test mix columns
+    // unsigned char data_matrix[4][4] = {
+    //     {0x02, 0x03, 0x01, 0x01},
+    //     {0x01, 0x02, 0x03, 0x01},
+    //     {0x01, 0x01, 0x02, 0x03},
+    //     {0x03, 0x01, 0x01, 0x02}
+    // };
+    // printf("Data Matrix: \n");
+    // for(int i = 0; i < 4; i++) {
+    //     for(int j = 0; j < 4; j++) {
+    //         printf("%02x ", data_matrix[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+    // mix_columns(data_matrix);
+    // printf("Mix Columns: \n");
+    // for(int i = 0; i < 4; i++) {
+    //     for(int j = 0; j < 4; j++) {
+    //         printf("%02x ", data_matrix[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+    // inv_mix_columns(data_matrix);
+    // printf("Inv Mix Columns: \n");
+    // for(int i = 0; i < 4; i++) {
+    //     for(int j = 0; j < 4; j++) {
+    //         printf("%02x ", data_matrix[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+    //working
+
+    //test shift rows
+    // unsigned char data_matrix[4][4] = {
+    //     {0x02, 0x03, 0x01, 0x01},
+    //     {0x01, 0x02, 0x03, 0x01},
+    //     {0x01, 0x01, 0x02, 0x03},
+    //     {0x03, 0x01, 0x01, 0x02}
+    // };
+    // printf("Data Matrix: \n");
+    // for(int i = 0; i < 4; i++) {
+    //     for(int j = 0; j < 4; j++) {
+    //         printf("%02x ", data_matrix[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+    // shift_rows(data_matrix);
+    // printf("Shift Rows: \n");
+    // for(int i = 0; i < 4; i++) {
+    //     for(int j = 0; j < 4; j++) {
+    //         printf("%02x ", data_matrix[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+    // inv_shift_rows(data_matrix);
+    // printf("Inv Shift Rows: \n");
+    // for(int i = 0; i < 4; i++) {
+    //     for(int j = 0; j < 4; j++) {
+    //         printf("%02x ", data_matrix[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+    //working
 }
 
 
