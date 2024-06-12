@@ -1,17 +1,32 @@
-# make the server AES-PCBC.c and .h into a library and include it in compiling the main file
-# it is in /src/server/main.c
-#compile it with the library
+include config.mk
 
-all: server
+CLIENT_SRC = $(wildcard src/client/*.c)
+CLIENT_OBJ = $(patsubst src/client/%.c,build/client/%.o,$(CLIENT_SRC))
 
-server: main.o AES-PCBC.o
-	gcc -o server main.o AES-PCBC.o -lcrypto
+SERVER_SRC = $(wildcard src/server/*.c)
+SERVER_OBJ = $(patsubst src/server/%.c,build/server/%.o,$(SERVER_SRC))
 
-main.o: src/server/main.c
-	gcc -c src/server/main.c
+all: bin/client.out bin/server.out
 
-AES-PCBC.o: src/server/AES-PCBC.c src/server/AES-PCBC.h
-	gcc -c src/server/AES-PCBC.c
+bin/client.out: $(CLIENT_OBJ)
+	$(CC) $(CLIENT_LDFLAGS) -o 'bin/client.out' $^
+
+build/client/%.o: src/client/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+build/client/%.o: src/client/%.c src/client/%.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+bin/server.out: $(SERVER_OBJ)
+	$(CC) $(SERVER_LDFLAGS) -o 'bin/server.out' $^
+
+build/server/%.o: src/server/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+build/server/%.o: src/server/%.c src/server/%.h
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f *.o server
+	rm -fr build/client/*.o build/server/*.o bin/*.out
+
+.PHONY: all clean
