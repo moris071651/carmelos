@@ -12,8 +12,8 @@ void SQLite_Execute(SQLite *sqlite, const char *sql, int (*callback)(void*,int,c
     sqlite3_exec(sqlite->db, sql, callback, data, &sqlite->err_msg);
 }
 
-void SQLite_UsserExists(SQLite *sqlite, const char *username, bool *exists) {
-    char sql[100];
+void SQLite_UserExists(SQLite *sqlite, const char *username, bool *exists) {
+    char sql[512];
     sprintf(sql, "SELECT * FROM users WHERE username = '%s'", username);
     if (sqlite3_exec(sqlite->db, sql, NULL, NULL, &sqlite->err_msg) != SQLITE_OK) {
         *exists = false;
@@ -23,13 +23,13 @@ void SQLite_UsserExists(SQLite *sqlite, const char *username, bool *exists) {
 }
 
 void SQLite_UserInsert(SQLite *sqlite, const char *username, const char *password) {
-    char sql[100];
+    char sql[512];
     sprintf(sql, "INSERT INTO users (username, password) VALUES ('%s', '%s')", username, password);
     sqlite3_exec(sqlite->db, sql, NULL, NULL, &sqlite->err_msg);
 }
 
 void SQLite_UserCheck(SQLite *sqlite, const char *username, const char *password, bool *correct) {
-    char sql[100];
+    char sql[512];
     sprintf(sql, "SELECT * FROM users WHERE username = '%s' AND password = '%s'", username, password);
     if (sqlite3_exec(sqlite->db, sql, NULL, NULL, &sqlite->err_msg) != SQLITE_OK) {
         *correct = false;
