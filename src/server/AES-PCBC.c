@@ -370,6 +370,7 @@ void AES_PCBC_Setup(AES_PCBC *aes_pcbc, AES_PCBC_Data *key, AES_PCBC_Data *iv) {
 
     convert_to_16b(key_copy, key->data_len, 0);
     convert_to_16b(iv_copy, iv->data_len, count);
+    count += 1;
     memcpy(aes_pcbc->key, key_copy, 17);
     memcpy(aes_pcbc->iv, iv_copy, 17);
 }
