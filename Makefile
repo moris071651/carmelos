@@ -6,7 +6,13 @@ CLIENT_OBJ = $(patsubst src/client/%.c,build/client/%.o,$(CLIENT_SRC))
 SERVER_SRC = $(wildcard src/server/*.c)
 SERVER_OBJ = $(patsubst src/server/%.c,build/server/%.o,$(SERVER_SRC))
 
-all: bin/client.out bin/server.out
+all: $(NEEDED_DIRS) $(MODE)
+
+debug: CFLAGS += $(DEBUG_CFLAGS)
+debug: bin/client.out bin/server.out
+
+release: CFLAGS += $(RELEASE_CFLAGS)
+release: bin/client.out bin/server.out
 
 bin/client.out: $(CLIENT_OBJ)
 	$(CC) $(CLIENT_LDFLAGS) -o 'bin/client.out' $^
@@ -28,5 +34,8 @@ build/server/%.o: src/server/%.c src/server/%.h
 
 clean:
 	rm -fr build/client/*.o build/server/*.o bin/*.out
+
+$(BUILD_DIRS):
+	mkdir -p $@
 
 .PHONY: all clean

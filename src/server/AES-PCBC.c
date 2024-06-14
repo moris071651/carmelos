@@ -7,6 +7,7 @@
 
 #include "AES-PCBC.h"
 
+static unsigned int count = 1;
 
 // first: simple small function that will be used commonly in the encryption and decryption functions
 // we don't need to expose theses functions to the user, so we will make them static
