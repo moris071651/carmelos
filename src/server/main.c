@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "sqlite.h"
 #include "AES-PCBC.h"
 
 int main(int argc, char* arv[]) {
@@ -25,4 +26,14 @@ int main(int argc, char* arv[]) {
     printf("Decrypted: %s\n", data);
 
     // Test_parts();
+
+    SQLite sqlite;
+    SQLite_Open(&sqlite, "test.db");
+    SQLite_Execute(&sqlite, "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT)", NULL, NULL);
+
+    bool exists;
+    SQLite_UsserExists(&sqlite, "admin", &exists);
+    if (!exists) {
+        SQLite_UserInsert(&sqlite, "admin", "admin");
+    }
 }
