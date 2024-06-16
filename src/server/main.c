@@ -32,7 +32,7 @@ int main(int argc, char* arv[]) {
     SQLite_Execute(&sqlite, "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT)", NULL, NULL);
 
     bool exists;
-    SQLite_UsserExists(&sqlite, "admin", &exists);
+    SQLite_UserExists(&sqlite, "admin", &exists);
     if (!exists) {
         SQLite_UserInsert(&sqlite, "admin", "admin");
     }

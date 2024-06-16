@@ -31,6 +31,7 @@
 
 WINDOW* tree_area = NULL;
 WINDOW* editor_area = NULL;
+WINDOW* search_area = NULL;
 
 size_t tree_start = 0;
 size_t tree_select = 0;
@@ -43,10 +44,15 @@ tree_item_t* tree_items_old = NULL;
 
 bool tree_need_redraw = false;
 bool editor_need_redraw = false;
+bool search_need_redraw = false;
+
+char search_area_buffer[257] = "";
+size_t search_area_buffer_size = 0;
 
 enum {
     TREE_AREA,
     EDITOR_AREA,
+    SEARCH_AREA,
 } active_area = TREE_AREA;
 
 static void destroy_interface(void) {
@@ -135,6 +141,10 @@ int sort_date_rev(const void* p1, const void* p2) {
 }
 
 static void tree_filter_items(const char* query) {
+    if (tree_items_size == 0) {
+        return;
+    }
+
     if (tree_items_old) {
         free(tree_items);
 
@@ -149,7 +159,7 @@ static void tree_filter_items(const char* query) {
     tree_item_t* filtered = malloc(tree_items_size * sizeof(tree_item_t));
     if (!filtered) {
         // TODO: BETTER LOGGING
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE + 1);
     }
 
     size_t size = 0;
@@ -160,13 +170,18 @@ static void tree_filter_items(const char* query) {
     }
 
     filtered = realloc(filtered, size * sizeof(tree_item_t));
-    if (!filtered) {
+    if (!filtered && size != 0) {
         // TODO: BETTER LOGGING
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE + 2);
     }
 
     tree_items_old = tree_items;
     tree_items_size_old = tree_items_size;
+
+    if (size == 0) {
+        free(filtered);
+        filtered = NULL;
+    }
 
     tree_items = filtered;
     tree_items_size = size;
@@ -193,71 +208,18 @@ static void handle_resize(void) {
     wresize(editor_area, maxy, maxx - width);
 }
 
-char* tree_search_prompt() {
+static void setup_search_area(void) {
     size_t maxx = getmaxx(stdscr);
     size_t maxy = getmaxy(stdscr);
 
-    WINDOW* win = newwin(3, maxx * 0.8, (maxy - 3) / 2, maxx * 0.1);
-    box(win, 0, 0);
-    wrefresh(win);
+    search_area = newwin(3, maxx * 0.8, (maxy - 3) / 2, maxx * 0.1);
+    box(search_area, 0, 0);
+    wrefresh(search_area);
     wrefresh(stdscr);
 
-    mvwprintw(win, 1, 1, "%s", TREE_VIEW_SEARCH_PROMPT);
+    mvwprintw(search_area, 1, 1, "%s", TREE_VIEW_SEARCH_PROMPT);
 
-    char* buffer = malloc(256 * sizeof(char));
-    size_t size = 0;
-
-    while (true) {
-        int input = wgetch(win);
-
-        if (input == 10) {
-            break;
-        }
-        else if (input == 27) {
-            free(buffer);
-            buffer = NULL;
-            break;
-        }
-        else if (input == KEY_BACKSPACE || input == KEY_DC || input == 127) {
-            if (size == 0) {
-                continue;
-            }
-
-            size--;
-            buffer[size] = '\0';
-        }
-        else if (isprint(input)) {
-            size++;
-            if (size >= 256) {
-                size = 255;
-                continue;
-            }
-
-            buffer[size - 1] = input;
-            buffer[size] = '\0';
-        }
-        else {
-            continue;
-        }
-
-        size_t width = getmaxx(win) - 2;
-        width -= sizeof(TREE_VIEW_SEARCH_PROMPT);
-
-        wclear(win);
-        mvwprintw(win, 1, 1, "%s %s", TREE_VIEW_SEARCH_PROMPT, buffer + (size > width ? size - width : 0));
-        box(win, 0, 0);
-        wrefresh(win);
-    }
-
-    wclear(win);
-    delwin(win);
-
-    if (size == 0) {
-        free(buffer);
-        buffer = NULL;
-    }
-
-    return buffer;
+    active_area = SEARCH_AREA;
 }
 
 static void handle_tree_keys(int input) {
@@ -305,14 +267,7 @@ static void handle_tree_keys(int input) {
         qsort(tree_items, tree_items_size, sizeof(tree_item_t), sort_date_rev);
     }
     else if (input == CTRL('f')) {
-        char* query = tree_search_prompt();
-
-        if (query) {
-            tree_filter_items(query);
-            free(query);
-        }
-
-        wclear(tree_area);
+        setup_search_area();
     }
     else if (input == CTRL('l')) {
         free(tree_items);
@@ -406,6 +361,70 @@ static void handle_editor_mouse(int input) {
     editor_need_redraw = true;
 }
 
+static void handle_search_keys(int input) {
+    if (search_area == NULL) {
+        return;
+    }
+
+    if (active_area != SEARCH_AREA) {
+        return;
+    }
+
+    if (input == KEY_MOUSE) {
+        return;
+    }
+
+    search_need_redraw = true;
+
+    if (input == 10) {
+        if (search_area_buffer_size > 0) {
+            tree_filter_items(search_area_buffer);
+        }
+
+        wclear(tree_area);
+
+        search_area_buffer[0] = '\0';
+        search_area_buffer_size = 0;
+
+        wclear(search_area);
+        delwin(search_area);
+        search_area = NULL;
+
+        active_area = TREE_AREA;
+
+        tree_need_redraw = true;
+        editor_need_redraw = true;
+    }
+    else if (input == 27) {
+        search_area_buffer[0] = '\0';
+        search_area_buffer_size = 0;
+
+        wclear(search_area);
+        delwin(search_area);
+        search_area = NULL;
+
+        active_area = TREE_AREA;
+
+        tree_need_redraw = true;
+        editor_need_redraw = true;
+    }
+    else if ((input == KEY_BACKSPACE || input == KEY_DC || input == 127)
+        && search_area_buffer_size != 0) {
+
+        search_area_buffer_size--;
+        search_area_buffer[search_area_buffer_size] = '\0';
+    }
+    else if (isprint(input)
+        && search_area_buffer_size < 256) {
+        
+        search_area_buffer[search_area_buffer_size++] = input;
+        search_area_buffer[search_area_buffer_size] = '\0';
+    }
+    else {
+        search_need_redraw = false;
+    }
+}
+
 static void handle_keys() {
     int input = getch();
 
@@ -428,19 +447,16 @@ static void handle_keys() {
 
         handle_editor_keys(input);
         handle_editor_mouse(input);
+
+        handle_search_keys(input);
     }
 }
 
 
 static void draw_tree(void) {
     if (!tree_need_redraw) {
-        box(tree_area, 0, 0);
-        wrefresh(tree_area);
         return;
     }
-
-    box(tree_area, 0, 0);
-    wrefresh(tree_area);
 
     for (size_t i = tree_start, line = 1; i < tree_items_size; i++) {
         if (tree_select == i) {
@@ -467,13 +483,14 @@ static void draw_tree(void) {
         }
     }
 
+    box(tree_area, 0, 0);
+    wrefresh(tree_area);
+
     tree_need_redraw = false;
 }
 
 static void draw_writer(void) {
     if (!editor_need_redraw) {
-        box(editor_area, 0, 0);
-        wrefresh(editor_area);
         return;
     }
 
@@ -483,11 +500,34 @@ static void draw_writer(void) {
     editor_need_redraw = false;
 }
 
+static void draw_search(void) {
+    if (search_area == NULL) {
+        return;
+    }
+
+    if (!search_need_redraw) {
+        box(search_area, 0, 0);
+        wrefresh(search_area);
+        return;
+    }
+
+    wclear(search_area);
+
+    size_t width = getmaxx(search_area) - 2;
+    width -= sizeof(TREE_VIEW_SEARCH_PROMPT);
+
+    mvwprintw(search_area, 1, 1, "%s %s", TREE_VIEW_SEARCH_PROMPT, search_area_buffer + (search_area_buffer_size > width ? search_area_buffer_size - width : 0));
+    
+    box(search_area, 0, 0);
+    wrefresh(search_area);
+}
+
 void draw_interface(void) {
     handle_keys();
 
     draw_tree();
     draw_writer();
+    draw_search();
 }
 
 void set_tree_items(tree_item_t* items, size_t size) {
