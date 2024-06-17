@@ -384,7 +384,7 @@ void AES_PCBC_Encrypt(AES_PCBC *aes_pcbc, unsigned char *data, unsigned int data
     unsigned char key_copy[17];
     memcpy(key_copy, key, 16);
     key_copy[16] = '\0';
-    unsigned char data_copy[data_len + 1];
+    unsigned char data_copy[data_len + 1 + (data_len % 16 == 0 ? 0 : 16 - (data_len % 16))];
     memcpy(data_copy, data, data_len);
     data_copy[data_len] = '\0';
     pad_data(data_copy, data_len);
