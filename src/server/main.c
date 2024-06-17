@@ -6,6 +6,29 @@
 #include "AES-PCBC.h"
 #include "fileStorage.h"
 
+
+void encryptFileContent(File *file, AES_PCBC *aes_pcbc) {
+    size_t size = file->size % 16 == 0 ? file->size : file->size + (16 - file->size % 16);
+    char content_tmp[size + 1];
+    strcpy(content_tmp, file->content);
+    content_tmp[file->size] = '\0';
+    AES_PCBC_Encrypt(aes_pcbc, content_tmp, file->size);
+    file->content = realloc(file->content, size);
+    strcpy(file->content, content_tmp);
+    file->size = size;
+}
+
+void decryptFileContent(FileContent *content, AES_PCBC *aes_pcbc) {
+    content->size = content->size % 16 == 0 ? content->size : content->size + (16 - content->size % 16);
+    char content_tmp[content->size + 1];
+    strcpy(content_tmp, content->content);
+    content_tmp[content->size] = '\0';
+    AES_PCBC_Decrypt(aes_pcbc, content_tmp, content->size);
+    content->content = realloc(content->content, content->size);
+    strcpy(content->content, content_tmp);
+    // file->size = strlen(file->content);
+}
+
 int main(int argc, char* arv[]) {
     AES_PCBC aes_pcbc;
     AES_PCBC_Data key;
