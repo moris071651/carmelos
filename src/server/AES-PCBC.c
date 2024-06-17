@@ -362,15 +362,17 @@ static void AES_Decrypt(unsigned char *data, unsigned char *key) {
 
 // we will have a function that sets up the needed data for the encryption
 
-void AES_PCBC_Setup(AES_PCBC *aes_pcbc, AES_PCBC_Data *key, AES_PCBC_Data *iv) {
+void AES_PCBC_Setup(AES_PCBC *aes_pcbc, AES_PCBC_Data *key, AES_PCBC_Data *iv, unsigned int num) {
     unsigned char key_copy[key->data_len + 1 < 17 ? 17 : key->data_len + 1];
     strcpy(key_copy, key->data);
     unsigned char iv_copy[iv->data_len + 1 < 17 ? 17 : iv->data_len + 1];
     strcpy(iv_copy, iv->data);
 
     convert_to_16b(key_copy, key->data_len, 0);
-    convert_to_16b(iv_copy, iv->data_len, count);
-    count += 1;
+    convert_to_16b(iv_copy, iv->data_len, num == 0 ? count : num);
+    if(num == 0) {
+        count++;
+    }
     memcpy(aes_pcbc->key, key_copy, 17);
     memcpy(aes_pcbc->iv, iv_copy, 17);
 }

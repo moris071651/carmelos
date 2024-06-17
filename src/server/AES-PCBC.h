@@ -12,7 +12,7 @@ typedef struct {
     unsigned int data_len;
 } AES_PCBC_Data;
 
-void AES_PCBC_Setup(AES_PCBC *aes_pcbc, AES_PCBC_Data *key, AES_PCBC_Data *iv);
+void AES_PCBC_Setup(AES_PCBC *aes_pcbc, AES_PCBC_Data *key, AES_PCBC_Data *iv, unsigned int num);
 
 void AES_PCBC_Encrypt(AES_PCBC *aes_pcbc, unsigned char *data, unsigned int data_len);
 

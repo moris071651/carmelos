@@ -19,7 +19,7 @@ int main(int argc, char* arv[]) {
     iv.data = (unsigned char*)"1234567890123456";
     iv.data_len = 16;
 
-    AES_PCBC_Setup(&aes_pcbc, &key, &iv);
+    AES_PCBC_Setup(&aes_pcbc, &key, &iv, 0);
     AES_PCBC_Encrypt(&aes_pcbc, data, data_len);
     printf("Encrypted: %s\n", data);
     data_len = data_len % 16 == 0 ? data_len : data_len + (16 - data_len % 16);
@@ -53,6 +53,10 @@ int main(int argc, char* arv[]) {
     file.size = strlen(file.content);
 
     //convert content to char array
+
+    AES_PCBC_Setup(&aes_pcbc, &key, &iv, 0);
+
+
     size_t size = file.size % 16 == 0 ? file.size : file.size + (16 - file.size % 16);
     char content_tmp[size + 1];
     strcpy(content_tmp, file.content);
@@ -79,6 +83,7 @@ int main(int argc, char* arv[]) {
 
     FileContent content;
     getFile(meta[0].id, &content);
+
 
     content.size = content.size % 16 == 0 ? content.size : content.size + (16 - content.size % 16);
     char content_tmp2[content.size + 1];
