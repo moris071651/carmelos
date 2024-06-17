@@ -29,6 +29,40 @@ void decryptFileContent(FileContent *content, AES_PCBC *aes_pcbc) {
     // file->size = strlen(file->content);
 }
 
+void hashPassword(char *password, char *hash) {
+    char tmp[32];
+    EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
+    EVP_DigestUpdate(mdctx, password, strlen(password));
+    EVP_DigestFinal_ex(mdctx, hash, NULL);
+    EVP_MD_CTX_free(mdctx);
+    for (int i = 0; i < 16; i++) {
+        sprintf(tmp + i * 2, "%02x", hash[i]);
+    }
+    strcpy(hash, tmp);
+}
+
+void initAll(SQLite *sqlite) {
+    SQLite_Open(sqlite, "test.db");
+    SQLite_Execute(sqlite, "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT)", NULL, NULL);
+    initFileStorage();
+}
+
+void signUp(SQLite *sqlite, char *username, char *password) {
+    char hash[32];
+    hashPassword(password, hash);
+    char *params[] = {username, hash};
+    SQLite_Execute(sqlite, "INSERT INTO users (username, password) VALUES (?, ?)", params, NULL);
+}
+
+void login(SQLite *sqlite, char *username, char *password, bool *success) {
+    char hash[32];
+    hashPassword(password, hash);
+    bool correct;
+    SQLite_UserCheck(sqlite, username, hash, &correct);
+    *success = correct;
+}
+
 int main(int argc, char* arv[]) {
     AES_PCBC aes_pcbc;
     AES_PCBC_Data key;
@@ -80,14 +114,16 @@ int main(int argc, char* arv[]) {
     AES_PCBC_Setup(&aes_pcbc, &key, &iv, 0);
 
 
-    size_t size = file.size % 16 == 0 ? file.size : file.size + (16 - file.size % 16);
-    char content_tmp[size + 1];
-    strcpy(content_tmp, file.content);
-    content_tmp[file.size] = '\0';
-    AES_PCBC_Encrypt(&aes_pcbc, content_tmp, file.size);
-    file.content = realloc(file.content, size);
-    strcpy(file.content, content_tmp);
-    file.size = size;
+    // size_t size = file.size % 16 == 0 ? file.size : file.size + (16 - file.size % 16);
+    // char content_tmp[size + 1];
+    // strcpy(content_tmp, file.content);
+    // content_tmp[file.size] = '\0';
+    // AES_PCBC_Encrypt(&aes_pcbc, content_tmp, file.size);
+    // file.content = realloc(file.content, size);
+    // strcpy(file.content, content_tmp);
+    // file.size = size;
+
+    encryptFileContent(&file, &aes_pcbc);
     printf("Encrypted content: %s\n", file.content);
 
     //I should really fix this mess....
@@ -108,15 +144,17 @@ int main(int argc, char* arv[]) {
     getFile(meta[0].id, &content);
 
 
-    content.size = content.size % 16 == 0 ? content.size : content.size + (16 - content.size % 16);
-    char content_tmp2[content.size + 1];
-    strcpy(content_tmp2, content.content);
-    content_tmp2[content.size] = '\0';
-    AES_PCBC_Decrypt(&aes_pcbc, content_tmp2, content.size);
-    content.content = realloc(content.content, content.size);
-    strcpy(content.content, content_tmp2);
+    // content.size = content.size % 16 == 0 ? content.size : content.size + (16 - content.size % 16);
+    // char content_tmp2[content.size + 1];
+    // strcpy(content_tmp2, content.content);
+    // content_tmp2[content.size] = '\0';
+    // AES_PCBC_Decrypt(&aes_pcbc, content_tmp2, content.size);
+    // content.content = realloc(content.content, content.size);
+    // strcpy(content.content, content_tmp2);
+
+    decryptFileContent(&content, &aes_pcbc);
 
     printf("File content: %s\n", content.content);
 
     deleteFile(meta[0].id);
-}
+};
