@@ -4,6 +4,7 @@
 #include <dirent.h>
 
 #include "fileStorage.h"
+#include "CRC.h"
 
 // small helper function to use later
 
@@ -12,16 +13,11 @@ static void get_file_path(char *path, char *id) {
 }
 
 static void hash_username(char *username, char *hash) {
-    char tmp[32];
-    EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
-    EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
-    EVP_DigestUpdate(mdctx, username, strlen(username));
-    EVP_DigestFinal_ex(mdctx, hash, NULL);
-    EVP_MD_CTX_free(mdctx);
-    for (int i = 0; i < 16; i++) {
-        sprintf(tmp + i * 2, "%02x", hash[i]);
-    }
-    strcpy(hash, tmp);
+    CRC crc;
+    CRC_Init(&crc);
+    CRC_Update(&crc, username, strlen(username));
+    unsigned int crc32 = CRC_Final(&crc);
+    sprintf(hash, "%u", crc32);
 }
 
 static void generate_id(File *file, char *id) {
@@ -96,7 +92,7 @@ void listFiles(char *username, FileMeta **files, int *count) {
     struct dirent *entry;
     *count = 0;
     while ((entry = readdir(dir)) != NULL) {
-        if (strncmp(entry->d_name, hash, 32) == 0) {
+        if (strncmp(entry->d_name, hash, strlen(hash)) == 0) {
             *count += 1;
             *files = realloc(*files, *count * sizeof(FileMeta));
             extract_id(entry->d_name, *files + *count - 1);

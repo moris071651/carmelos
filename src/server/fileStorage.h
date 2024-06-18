@@ -2,7 +2,7 @@
 #define FILESTORAGE_H
 
 #include <time.h>
-#include <openssl/evp.h>
+
 #define FILE_STORAGE_PATH "./files"
 
 typedef struct {

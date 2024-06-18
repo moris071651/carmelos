@@ -5,6 +5,7 @@
 #include "sqlite.h"
 #include "AES-PCBC.h"
 #include "fileStorage.h"
+#include "CRC.h"
 
 
 void encryptFileContent(File *file, AES_PCBC *aes_pcbc) {
@@ -30,16 +31,11 @@ void decryptFileContent(FileContent *content, AES_PCBC *aes_pcbc) {
 }
 
 void hashPassword(char *password, char *hash) {
-    char tmp[32];
-    EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
-    EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
-    EVP_DigestUpdate(mdctx, password, strlen(password));
-    EVP_DigestFinal_ex(mdctx, hash, NULL);
-    EVP_MD_CTX_free(mdctx);
-    for (int i = 0; i < 16; i++) {
-        sprintf(tmp + i * 2, "%02x", hash[i]);
-    }
-    strcpy(hash, tmp);
+    CRC crc;
+    CRC_Init(&crc);
+    CRC_Update(&crc, password, strlen(password));
+    unsigned int crc32 = CRC_Final(&crc);
+    sprintf(hash, "%u", crc32);
 }
 
 void initAll(SQLite *sqlite) {
@@ -109,6 +105,7 @@ int main(int argc, char* arv[]) {
     strcpy(file.content, "Hello World! Hello World!");
     file.size = strlen(file.content);
 
+
     //convert content to char array
 
     AES_PCBC_Setup(&aes_pcbc, &key, &iv, 0);
@@ -134,7 +131,9 @@ int main(int argc, char* arv[]) {
     FileMeta *meta;
     int count;
 
+    printf("Listing files...\n");
     listFiles("admin", &meta, &count);
+    printf("Files count: %d\n", count);
 
     for (int i = 0; i < count; i++) {
         printf("File: %s\n", meta[i].filename);
