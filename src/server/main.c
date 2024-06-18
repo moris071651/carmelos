@@ -47,8 +47,7 @@ void initAll(SQLite *sqlite) {
 void signUp(SQLite *sqlite, char *username, char *password) {
     char hash[32];
     hashPassword(password, hash);
-    char *params[] = {username, hash};
-    SQLite_Execute(sqlite, "INSERT INTO users (username, password) VALUES (?, ?)", params, NULL);
+    SQLite_UserInsert(sqlite, username, hash);
 }
 
 void login(SQLite *sqlite, char *username, char *password, bool *success) {
@@ -131,9 +130,7 @@ int main(int argc, char* arv[]) {
     FileMeta *meta;
     int count;
 
-    printf("Listing files...\n");
     listFiles("admin", &meta, &count);
-    printf("Files count: %d\n", count);
 
     for (int i = 0; i < count; i++) {
         printf("File: %s\n", meta[i].filename);
