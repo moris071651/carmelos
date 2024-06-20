@@ -59,13 +59,44 @@ void login(SQLite *sqlite, char *username, char *password, bool *success) {
     *success = correct;
 }
 
-void Call_Functions(SQLite *sqlite, Socket *sock, char *title, AES_PCBC *aes_pcbc) {
+// full functions
+
+void full_signUp(SQLite *sqlite, Socket *sock) {
+    User user;
+    Socket_RecieveUser(sock, &user);
+    signUp(sqlite, user.username, user.password);
+    Response response;
+    response.success = true;
+    strcpy(response.message, "Signed up successfully");
+    Socket_SendResponse(sock, &response);
+}
+
+void full_login(SQLite *sqlite, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data *key) {
+    User user;
+    Socket_RecieveUser(sock, &user);
+    bool success;
+    login(sqlite, user.username, user.password, &success);
+    Response response;
+    response.success = success;
+    if(success) {
+        strcpy(response.message, "Logged in successfully");
+        key->data = user.password;
+        key->data_len = strlen(user.password);
+        AES_PCBC_Setup(aes_pcbc, &key, &key, 1);
+    }
+    else {
+        strcpy(response.message, "Invalid username or password");
+    }
+    Socket_SendResponse(sock, &response);
+}
+
+void Call_Functions(SQLite *sqlite, Socket *sock, char *title, AES_PCBC *aes_pcbc, AES_PCBC_Data *key) {
     // check every possible call and call full_function
     if(strcmp(title, "signUp") == 0) {
-        full_signUp(sqlite, sock, aes_pcbc);
+        full_signUp(sqlite, sock);
     }
     else if(strcmp(title, "login") == 0) {
-        full_login(sqlite, sock, aes_pcbc);
+        full_login(sqlite, sock, aes_pcbc, key);
     }
     else if(aes_pcbc->key[0] == '\0' || aes_pcbc->iv[0] == '\0') {
         Response response;
@@ -97,8 +128,12 @@ int main(int argc, char *argv[]) {
         }
     }
     AES_PCBC aes_pcbc;
+    AES_PCBC_Data key;
     AES_PCBC_Init(&aes_pcbc);
     while(1){
         Socket_Wait(&sock);
+        char title[256];
+        Socket_RecieveTitle(&sock, title);
+        Call_Functions(&sqlite, &sock, title, &aes_pcbc, &key);
     }
 }
