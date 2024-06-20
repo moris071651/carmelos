@@ -95,7 +95,7 @@ void Socket_Receive(Socket *sock, void *data, size_t size) {
     }
 }
 
-void Socket_SendFile(Socket *sock, File *file) {
+void Socket_SendFile(Socket *sock, FileSocket *file) {
     if (!sock->connected) {
         return;
     }
@@ -106,7 +106,7 @@ void Socket_SendFile(Socket *sock, File *file) {
     Socket_Send(sock, file->content, sizeof(file->content));
 }
 
-void Socket_ReceiveFile(Socket *sock, File *file) {
+void Socket_ReceiveFile(Socket *sock, FileSocket *file) {
     if (!sock->connected) {
         return;
     }
@@ -126,7 +126,7 @@ void Socket_SendResponse(Socket *sock, Response *response) {
     Socket_Send(sock, response->message, sizeof(response->message));
 }
 
-void Socket_SendFileMetas(Socket *sock, FileMeta *metas, int count) {
+void Socket_SendFileMetas(Socket *sock, FileMeta_Socket *metas, int count) {
     if (!sock->connected) {
         return;
     }
@@ -139,7 +139,7 @@ void Socket_SendFileMetas(Socket *sock, FileMeta *metas, int count) {
     }
 }
 
-void Socket_ReceiveFileMeta(Socket *sock, FileMeta *meta) {
+void Socket_ReceiveFileMeta(Socket *sock, FileMeta_Socket *meta) {
     if (!sock->connected) {
         return;
     }
@@ -163,4 +163,13 @@ void Socket_SendTitle(Socket *sock, char *string) {
     }
 
     Socket_Send(sock, string, 256);
+}
+
+void Socket_RecieveUser(Socket *sock, User *user) {
+    if (!sock->connected) {
+        return;
+    }
+
+    Socket_Receive(sock, user->username, sizeof(user->username));
+    Socket_Receive(sock, user->password, sizeof(user->password));
 }

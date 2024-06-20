@@ -25,13 +25,13 @@ typedef struct {
     char filename[256];
     size_t size;
     char content[1024];
-} File;
+} FileSocket;
 
 typedef struct {
     char id[512];
     char filename[256];
     time_t timestamp;
-} FileMeta;
+} FileMeta_Socket;
 
 typedef struct {
     bool success;
@@ -48,21 +48,23 @@ void Socket_Send(Socket *sock, void *data, size_t size);
 
 void Socket_Receive(Socket *sock, void *data, size_t size);
 
-void Socket_SendFile(Socket *sock, File *file);
+void Socket_SendFile(Socket *sock, FileSocket *file);
 
-void Socket_ReceiveFile(Socket *sock, File *file);
+void Socket_ReceiveFile(Socket *sock, FileSocket *file);
 
 void Socket_SendResponse(Socket *sock, Response *response);
 
-void Socket_SendFileMetas(Socket *sock, FileMeta *metas, int count);
+void Socket_SendFileMetas(Socket *sock, FileMeta_Socket *metas, int count);
 
-void Socket_ReceiveFileMeta(Socket *sock, FileMeta *meta);
+void Socket_ReceiveFileMeta(Socket *sock, FileMeta_Socket *meta);
 
 void Socket_RecieveTitle(Socket *sock, char *string);
 
 void Socket_Wait(Socket *sock);
 
 void Socket_SendTitle(Socket *sock, char *string);
+
+void Socket_RecieveUser(Socket *sock, User *user);
 
 
 #endif
