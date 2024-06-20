@@ -433,6 +433,13 @@ void AES_PCBC_Decrypt(AES_PCBC *aes_pcbc, unsigned char *data, unsigned int data
     memcpy(data, data_copy, data_len);
 }
 
+void AES_PCBC_Init(AES_PCBC *aes_pcbc) {
+    for (int i = 0; i < 17; i++) {
+        aes_pcbc->key[i] = '\0';
+        aes_pcbc->iv[i] = '\0';
+    }
+}
+
 
 
 
