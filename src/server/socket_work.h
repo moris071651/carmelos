@@ -38,25 +38,31 @@ typedef struct {
     char message[256];
 } Response;
 
-void Socket_Init(Socket *socket);
+void Socket_Init(Socket *sock);
 
-void Socket_Open(Socket *socket, int port);
+void Socket_Open(Socket *sock, int port);
 
-void Socket_Close(Socket *socket);
+void Socket_Close(Socket *sock);
 
-void Socket_Send(Socket *socket, void *data, size_t size);
+void Socket_Send(Socket *sock, void *data, size_t size);
 
-void Socket_Receive(Socket *socket, void *data, size_t size);
+void Socket_Receive(Socket *sock, void *data, size_t size);
 
-void Socket_SendFile(Socket *socket, File *file);
+void Socket_SendFile(Socket *sock, File *file);
 
-void Socket_ReceiveFile(Socket *socket, File *file);
+void Socket_ReceiveFile(Socket *sock, File *file);
 
-void Socket_SendResponse(Socket *socket, Response *response);
+void Socket_SendResponse(Socket *sock, Response *response);
 
-void Socket_SendFileMetas(Socket *socket, FileMeta *metas, int count);
+void Socket_SendFileMetas(Socket *sock, FileMeta *metas, int count);
 
-void Socket_ReceiveFileMeta(Socket *socket, FileMeta *meta);
+void Socket_ReceiveFileMeta(Socket *sock, FileMeta *meta);
+
+void Socket_RecieveTitle(Socket *sock, char *string);
+
+void Socket_Wait(Socket *sock);
+
+void Socket_SendTitle(Socket *sock, char *string);
 
 
 #endif
