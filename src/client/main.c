@@ -561,6 +561,7 @@ tree_item_t file_tree_list[] = {
 int main(int argc, char* arv[]) {
     set_tree_items(file_tree_list, 52);
 
+    setup_talk();
     setup_interface();
 
     while(true) {

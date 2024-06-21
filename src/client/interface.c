@@ -269,7 +269,8 @@ static void handle_tree_keys(int input) {
     else if (input == CTRL('f')) {
         setup_search_area();
     }
-    else if (input == CTRL('l')) {
+    else if (input == CTRL('l')
+        && tree_items_old != NULL) {
         free(tree_items);
 
         tree_items = tree_items_old;
@@ -294,6 +295,14 @@ static void handle_tree_mouse(int input) {
 
     MEVENT event;
     if(getmouse(&event) != OK) {
+        return;
+    }
+
+    if (getbegx(tree_area) > event.x || getmaxx(tree_area) < event.x) {
+        return;
+    }
+
+    if (getbegy(tree_area) > event.y || getmaxy(tree_area) < event.y) {
         return;
     }
 
@@ -394,6 +403,9 @@ static void handle_search_keys(int input) {
 
         tree_need_redraw = true;
         editor_need_redraw = true;
+
+        tree_select = 0;
+        tree_start = 0;
     }
     else if (input == 27) {
         search_area_buffer[0] = '\0';
@@ -520,6 +532,8 @@ static void draw_search(void) {
     
     box(search_area, 0, 0);
     wrefresh(search_area);
+
+    search_need_redraw = false;
 }
 
 void draw_interface(void) {
