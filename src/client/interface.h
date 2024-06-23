@@ -10,4 +10,6 @@ void setup_interface(void);
 void login_interface(void);
 void draw_interface(void);
 
+void editor_set_note(char* note);
+
 #endif // INTERFACE_H

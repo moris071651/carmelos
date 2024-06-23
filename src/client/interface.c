@@ -49,11 +49,22 @@ bool search_need_redraw = false;
 char search_area_buffer[257] = "";
 size_t search_area_buffer_size = 0;
 
+char** editor_buffer = NULL;
+size_t editor_buffer_lines = 0;
+
+size_t editor_start_x = 0;
+size_t editor_start_y = 0;
+
+size_t editor_cursor_x = 0;
+size_t editor_cursor_y = 0;
+
 enum {
     TREE_AREA,
     EDITOR_AREA,
     SEARCH_AREA,
 } active_area = TREE_AREA;
+
+static void editor_buffer_clear(void);
 
 static void destroy_interface(void) {
     if (tree_area != NULL) {
@@ -222,17 +233,17 @@ static void setup_search_area(void) {
     active_area = SEARCH_AREA;
 }
 
-static void handle_tree_keys(int input) {
+static bool handle_tree_keys(int input) {
     if (active_area != TREE_AREA) {
-        return;
+        return false;
     }
 
     if (tree_items_size == 0) {
-        return;
+        return false;
     }
 
     if (input == KEY_MOUSE) {
-        return;
+        return false;
     }
 
     tree_need_redraw = true;
@@ -252,7 +263,10 @@ static void handle_tree_keys(int input) {
         }
     }
     else if (input == '\n' || input == 'l') {
-        // TODO: How to open notes
+        // talk_request_note();
+
+        // editor_buffer_clear();
+        active_area = EDITOR_AREA;
     }
     else if (input == KEY_F(1)) {
         qsort(tree_items, tree_items_size, sizeof(tree_item_t), sort_alpha);
@@ -281,29 +295,32 @@ static void handle_tree_keys(int input) {
     }
     else {
         tree_need_redraw = false;
+        return false;
     }
+
+    return true;
 }
 
-static void handle_tree_mouse(int input) {
+static bool handle_tree_mouse(int input) {
     if (active_area != TREE_AREA) {
-        return;
+        return false;
     }
 
     if (input != KEY_MOUSE) {
-        return;
+        return false;
     }
 
     MEVENT event;
     if(getmouse(&event) != OK) {
-        return;
+        return false;
     }
 
     if (getbegx(tree_area) > event.x || getmaxx(tree_area) < event.x) {
-        return;
+        return false;
     }
 
     if (getbegy(tree_area) > event.y || getmaxy(tree_area) < event.y) {
-        return;
+        return false;
     }
 
     tree_need_redraw = true;
@@ -338,49 +355,313 @@ static void handle_tree_mouse(int input) {
     }
     else {
         tree_need_redraw = false;
+
+        return false;
     }
+
+    return true;
 }
 
-static void handle_editor_keys(int input) {
-    if (active_area != EDITOR_AREA) {
+static void editor_buffer_clear(void) {
+    if (editor_buffer == NULL) {
         return;
     }
 
-    if (input == KEY_MOUSE) {
-        return;
+    for (size_t i = 0; i < editor_buffer_lines; i++) {
+        free(editor_buffer[i]);
     }
+    
+    free(editor_buffer);
+
+    editor_buffer = NULL;
+    editor_buffer_lines = 0;
+
+    editor_cursor_x = 0;
+    editor_cursor_y = 0;
+
+    editor_start_x = 0;
+    editor_start_y = 0;
 
     editor_need_redraw = true;
 }
 
-static void handle_editor_mouse(int input) {
-    if (active_area != EDITOR_AREA) {
+void editor_set_note(char* note) {
+    editor_buffer_clear();
+
+    if (note == NULL) {
+        editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char *));
+        if (!editor_buffer) {
+            exit(EXIT_FAILURE);
+        }
+
+        editor_buffer[editor_buffer_lines] = strdup("");
+        if (!editor_buffer[editor_buffer_lines]) {
+            exit(EXIT_FAILURE);
+        }
+
+        editor_buffer_lines += 1;
+    }
+
+    char* start = note;
+    char* end = strchr(start, '\n');
+
+    while (end != NULL) {
+        size_t line_length = end - start;
+
+        editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char*));
+        if (!editor_buffer) {
+            exit(EXIT_FAILURE);
+        }
+
+        editor_buffer[editor_buffer_lines] = malloc(line_length + 1);
+        if (!editor_buffer[editor_buffer_lines]) {
+            exit(EXIT_FAILURE);
+        }
+
+        strncpy(editor_buffer[editor_buffer_lines], start, line_length);
+        editor_buffer[editor_buffer_lines][line_length] = '\0';
+
+        editor_buffer_lines += 1;
+
+        start = end + 1;
+        end = strchr(start, '\n');
+    }
+
+    if (*start != '\0') {
+        editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char *));
+        if (!editor_buffer) {
+            exit(EXIT_FAILURE);
+        }
+
+        editor_buffer[editor_buffer_lines] = strdup(start);
+        if (!editor_buffer[editor_buffer_lines]) {
+            exit(EXIT_FAILURE);
+        }
+
+        editor_buffer_lines += 1;
+    } else if (end != start) {
+        editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char *));
+        if (!editor_buffer) {
+            exit(EXIT_FAILURE);
+        }
+
+        editor_buffer[editor_buffer_lines] = strdup("");
+        if (!editor_buffer[editor_buffer_lines]) {
+            exit(EXIT_FAILURE);
+        }
+
+        editor_buffer_lines += 1;
+    }
+}
+
+static void editor_buffer_insert_char(char ch) {
+    char* line = editor_buffer[editor_cursor_y];
+    size_t len = strlen(line);
+
+    line = realloc(line, len + 2);
+    if (!line) {
+        exit(EXIT_FAILURE);
+    }
+
+    memmove(&line[editor_cursor_x + 1], &line[editor_cursor_x], len - editor_cursor_x + 1);
+
+    line[editor_cursor_x] = ch;
+
+    editor_buffer[editor_cursor_y] = line;
+    editor_cursor_x++;
+}
+
+static void editor_buffer_insert_newline(void) {
+    if (editor_cursor_y >= editor_buffer_lines) {
         return;
     }
 
-    if (input != KEY_MOUSE) {
+    char* line = editor_buffer[editor_cursor_y];
+
+    editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char*));
+    if (!editor_buffer) {
+        exit(EXIT_FAILURE);
+    }
+
+    memmove(&editor_buffer[editor_cursor_y + 1], &editor_buffer[editor_cursor_y], (editor_buffer_lines - editor_cursor_y) * sizeof(char*));
+
+    editor_buffer[editor_cursor_y + 1] = strdup(&line[editor_cursor_x]);
+    if (!editor_buffer[editor_cursor_y + 1]) {
+        exit(EXIT_FAILURE);
+    }
+
+    line[editor_cursor_x] = '\0';
+
+    editor_buffer[editor_cursor_y] = realloc(line, editor_cursor_x + 1);
+    if (!editor_buffer[editor_cursor_y]) {
+        exit(EXIT_FAILURE);
+    }
+
+    editor_buffer_lines++;
+
+    editor_cursor_y++;
+    editor_cursor_x = 0;
+}
+
+static void editor_buffer_delete(void) {
+    char* line = editor_buffer[editor_cursor_y];
+    size_t len = strlen(line);
+
+    if (editor_cursor_x < len) {
+        memmove(&line[editor_cursor_x], &line[editor_cursor_x + 1], len - editor_cursor_x);
+        
+        line = realloc(line, len);
+        if (!line) {
+            exit(EXIT_FAILURE);
+        }
+
+        editor_buffer[editor_cursor_y] = line;
+    }
+    else if (editor_cursor_y + 1 < editor_buffer_lines) {
+        line = realloc(line, len + strlen(editor_buffer[editor_cursor_y + 1]) + 1);
+        if (!line) {
+            exit(EXIT_FAILURE);
+        }
+
+        strcat(line, editor_buffer[editor_cursor_y + 1]);
+        free(editor_buffer[editor_cursor_y + 1]);
+
+        memmove(&editor_buffer[editor_cursor_y + 1], &editor_buffer[editor_cursor_y + 2], (editor_buffer_lines - editor_cursor_y - 1) * sizeof(char*));
+        
+        editor_buffer_lines--;
+        editor_buffer = realloc(editor_buffer, editor_buffer_lines * sizeof(char*));
+        if (!editor_buffer) {
+            exit(EXIT_FAILURE);
+        }
+
+        editor_buffer[editor_cursor_y] = line;
+    }
+}
+
+static void editor_buffer_backspace(void) {
+    if (editor_cursor_y >= editor_buffer_lines) {
         return;
+    }
+
+    if (editor_cursor_x > 0) {
+        editor_cursor_x--;
+
+        editor_buffer_delete();
+    }
+    else if (editor_cursor_y > 0) {
+        editor_cursor_x = strlen(editor_buffer[editor_cursor_y - 1]);
+        editor_cursor_y--;
+
+        editor_buffer_delete();
+    }
+}
+
+static bool handle_editor_keys(int input) {
+    if (active_area != EDITOR_AREA) {
+        return false;
+    }
+
+    if (input == KEY_MOUSE) {
+        return false;
+    }
+
+    if (editor_buffer == NULL) {
+        return false;
+    }
+
+    editor_need_redraw = true;
+
+    if (input == KEY_UP
+        && editor_cursor_y > 0) {
+        editor_cursor_y--;
+
+        size_t tmp = strlen(editor_buffer[editor_cursor_y]);
+        if (editor_cursor_x > tmp) {
+            editor_cursor_x = (tmp == 0) ? 0 : tmp - 1;
+        }
+
+        // TODO: editor_start_y
+    }
+    else if (input == KEY_DOWN
+        && editor_cursor_y + 1 < editor_buffer_lines) {
+        editor_cursor_y++;
+
+        size_t tmp = strlen(editor_buffer[editor_cursor_y]);
+        if (editor_cursor_x > tmp) {
+            editor_cursor_x = (tmp == 0) ? 0 : tmp - 1;
+        }
+
+        // TODO: editor_start_y
+    }
+    else if (input == KEY_LEFT
+        && editor_cursor_x > 0) {
+        editor_cursor_x--;
+    }
+    else if (input == KEY_RIGHT
+        && editor_cursor_x < strlen(editor_buffer[editor_cursor_y])) {
+        editor_cursor_x++;
+    }
+    else if (input == KEY_HOME) {
+        editor_cursor_x = 0;
+    }
+    else if (input == KEY_END) {
+        editor_cursor_x = strlen(editor_buffer[editor_cursor_y]);
+    }
+    else if (input == '\n') {
+        editor_buffer_insert_newline();
+    }
+    else if (input == KEY_DC) {
+        editor_buffer_delete();
+    }
+    else if (input == KEY_BACKSPACE || input == 127) {
+        editor_buffer_backspace();
+    }
+    else if (input >= 32 && input <= 126) {
+        editor_buffer_insert_char(input);
+    }
+    else if (input == CTRL('t')) {
+        active_area = TREE_AREA;
+        tree_need_redraw = true;
+    }
+    else {
+        editor_need_redraw = false;
+
+        return false;
+    }
+
+    return true;
+}
+
+static bool handle_editor_mouse(int input) {
+    if (active_area != EDITOR_AREA) {
+        return false;
+    }
+
+    if (input != KEY_MOUSE) {
+        return false;
     }
 
     MEVENT event;
     if(getmouse(&event) != OK) {
-        return;
+        return false;
     }
 
     editor_need_redraw = true;
+
+    return true;
 }
 
-static void handle_search_keys(int input) {
+static bool handle_search_keys(int input) {
     if (search_area == NULL) {
-        return;
+        return false;
     }
 
     if (active_area != SEARCH_AREA) {
-        return;
+        return false;
     }
 
     if (input == KEY_MOUSE) {
-        return;
+        return false;
     }
 
     search_need_redraw = true;
@@ -434,7 +715,11 @@ static void handle_search_keys(int input) {
     }
     else {
         search_need_redraw = false;
+
+        return false;
     }
+
+    return true;
 }
 
 static void handle_keys() {
@@ -454,16 +739,15 @@ static void handle_keys() {
         editor_need_redraw = true;
     }
     else {
-        handle_tree_keys(input);
-        handle_tree_mouse(input);
+        if (handle_tree_keys(input)) return;
+        if (handle_tree_mouse(input)) return;
 
-        handle_editor_keys(input);
-        handle_editor_mouse(input);
+        if (handle_editor_keys(input)) return;
+        // if (handle_editor_mouse(input)) return;
 
-        handle_search_keys(input);
+        if (handle_search_keys(input)) return;
     }
 }
-
 
 static void draw_tree(void) {
     if (!tree_need_redraw) {
@@ -501,10 +785,37 @@ static void draw_tree(void) {
     tree_need_redraw = false;
 }
 
-static void draw_writer(void) {
+static void draw_editor(void) {
     if (!editor_need_redraw) {
         return;
     }
+
+    size_t maxx = getmaxx(editor_area);
+    size_t maxy = getmaxy(editor_area);
+
+    werase(editor_area);
+
+    for (size_t i = editor_start_y, line = 1; i < editor_buffer_lines; i++) {
+        char buff[maxx];
+
+        memset(buff, ' ', maxx - 2);
+        buff[maxx - 1] = '\0';
+        mvwprintw(editor_area, line, 1, "%s", buff);
+
+        strncpy(buff, editor_buffer[i], maxx - 2);
+        buff[maxx - 1] = '\0';
+        mvwprintw(editor_area, line, 1, "%s", buff);
+
+        if (++line > maxy) {
+            break;
+        }
+    }
+
+    char tmp[10];
+    wattron(editor_area, A_STANDOUT);
+    mvwinnstr(editor_area, editor_cursor_y + 1, editor_cursor_x + 1, tmp, 1);
+    mvwprintw(editor_area, editor_cursor_y + 1, editor_cursor_x + 1, "%s", tmp);
+    wattroff(editor_area, A_STANDOUT);
 
     box(editor_area, 0, 0);
     wrefresh(editor_area);
@@ -540,7 +851,7 @@ void draw_interface(void) {
     handle_keys();
 
     draw_tree();
-    draw_writer();
+    draw_editor();
     draw_search();
 }
 

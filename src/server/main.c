@@ -82,7 +82,7 @@ void full_login(SQLite *sqlite, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data 
         strcpy(response.message, "Logged in successfully");
         key->data = user.password;
         key->data_len = strlen(user.password);
-        AES_PCBC_Setup(aes_pcbc, &key, &key, 1);
+        AES_PCBC_Setup(aes_pcbc, key, key, 1);
     }
     else {
         strcpy(response.message, "Invalid username or password");

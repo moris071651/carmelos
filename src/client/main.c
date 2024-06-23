@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+#include "talk.h"
 #include "interface.h"
 
 tree_item_t file_tree_list[] = {
@@ -554,15 +555,19 @@ tree_item_t file_tree_list[] = {
     //     .date = 83392,
     //     .name = "iiiiiilo",
     // },
-
 };
+
+#include <string.h>
 
 
 int main(int argc, char* arv[]) {
     set_tree_items(file_tree_list, 52);
 
-    setup_talk();
+    // setup_talk();
     setup_interface();
+
+    char* note = strdup("EHdjfisjidfj\nuijhasuhdfuhuhuhua\n\njuhauhsufdhuahdfiajfi\n");
+    editor_set_note(note);
 
     while(true) {
         draw_interface();
