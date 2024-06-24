@@ -22,8 +22,20 @@ void Socket_Open(Socket *sock, char *filename){
     }
     addr.sun_family = AF_UNIX;
     strcpy(addr.sun_path, filename);
-    if (connect(sock->socket, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-        perror("ERROR connecting");
+    //bind
+    if (bind(sock->socket, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+        perror("ERROR binding");
+        exit(1);
+    }
+    //listen
+    if (listen(sock->socket, 5) == -1) {
+        perror("ERROR listening");
+        exit(1);
+    }
+    //accept
+    sock->socket = accept(sock->socket, NULL, NULL);
+    if (sock->socket == -1) {
+        perror("ERROR accepting");
         exit(1);
     }
 
