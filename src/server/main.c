@@ -278,7 +278,7 @@ int main(int argc, char *argv[]) {
     //wait for connection
     Socket sock;
     Socket_Init(&sock);
-    Socket_Open(&sock, 1337);
+    Socket_Open(&sock, "socket");
     while(1){
         if(sock.connected){
             break;
