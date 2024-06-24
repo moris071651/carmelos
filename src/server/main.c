@@ -16,7 +16,7 @@ void encryptFileContent(File *file, AES_PCBC *aes_pcbc) {
     strcpy(content_tmp, file->content);
     content_tmp[file->size] = '\0';
     AES_PCBC_Encrypt(aes_pcbc, content_tmp, file->size);
-    file->content = realloc(file->content, size);
+    file->content = malloc(size);
     strcpy(file->content, content_tmp);
     file->size = size;
 }
@@ -89,6 +89,7 @@ void full_signUp(AllData *data, SQLite *sqlite, Socket *sock, AES_PCBC *aes_pcbc
         response.type = 3;
         strcpy(response.username, username);
         Socket_SendResponse(sock, &response);
+        key->data = malloc(strlen(data->signup.password) + 1);
         strcpy(key->data, data->signup.password);
         key->data_len = strlen(data->signup.password);
         AES_PCBC_Setup(aes_pcbc, key, key, 1);
@@ -110,6 +111,7 @@ void full_login(AllData *data, SQLite *sqlite, Socket *sock, AES_PCBC *aes_pcbc,
         response.type = 3;
         strcpy(response.username, username);
         Socket_SendResponse(sock, &response);
+        key->data = malloc(strlen(data->login.password) + 1);
         strcpy(key->data, data->login.password);
         key->data_len = strlen(data->login.password);
         AES_PCBC_Setup(aes_pcbc, key, key, 1);
@@ -125,38 +127,43 @@ void full_login(AllData *data, SQLite *sqlite, Socket *sock, AES_PCBC *aes_pcbc,
 
 void full_newItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data *key) {
     File file;
+    printf("filename: %s\n", data->newItem.filename);
+    printf("size: %ld\n", data->newItem.size);
+    file.filename = malloc(strlen(data->newItem.filename) + 1);
     strcpy(file.filename, data->newItem.filename);
+    file.username = malloc(strlen(data->newItem.username) + 1);
+    strcpy(file.username, data->newItem.username);
     time_t timestamp;
     time(&timestamp);
     file.timestamp = timestamp;
     file.size = data->newItem.size;
     if (file.size > 0) {
-        file.content = malloc(file.size);
+        file.content = malloc(file.size) + 1;
         Socket_ReceiveContent(sock, file.content, file.size);
         int count = 0;
-        char count_str[16];
-        char tmp_id[512];
-        strcpy(tmp_id, data->newItem.filename);
-        char tmp_timestamp[32];
-        sprintf(tmp_timestamp, "%ld", file.timestamp);
-        strcat(tmp_id, tmp_timestamp);
-        hashID(tmp_id, count_str);
+        char timestamp_str[32];
+        sprintf(timestamp_str, "%ld", file.timestamp);
+        char count_str[5];
+        count_str[0] = timestamp_str[strlen(timestamp_str) - 4];
+        count_str[1] = timestamp_str[strlen(timestamp_str) - 3];
+        count_str[2] = timestamp_str[strlen(timestamp_str) - 2];
+        count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
+        count_str[4] = '\0';
         count = atoi(count_str);
         AES_PCBC_Setup(aes_pcbc, key, key, count);
-        encryptFileContent(&file, aes_pcbc);        
+        encryptFileContent(&file, aes_pcbc);
     } else {
         file.content = malloc(1);
         file.content[0] = '\0';
     }
     saveFile(&file);
 
-    FileMeta_Socket meta;
-    meta.type = 5;
-
-    generate_id(&file, meta.id);
-    strcpy(meta.filename, file.filename);
-    meta.timestamp = file.timestamp;
-    Socket_SendFileMeta(sock, &meta, 5);
+    FileMeta_Socket *meta = malloc(sizeof(FileMeta_Socket));
+    meta->type = 5;
+    generate_id(&file, meta->id);
+    strcpy(meta->filename, file.filename);
+    meta->timestamp = file.timestamp;
+    Socket_SendFileMeta(sock, meta, 5);
 }
 
 void full_deleteItem(AllData *data, Socket *sock) {
@@ -174,13 +181,14 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
     getFile(meta.id, &content);
     //set up the aes
     int count = 0;
-    char count_str[16];
-    char tmp_id[512];
-    strcpy(tmp_id, meta.filename);
-    char tmp_timestamp[32];
-    sprintf(tmp_timestamp, "%ld", meta.timestamp);
-    strcat(tmp_id, tmp_timestamp);
-    hashID(tmp_id, count_str);
+    char timestamp_str[32];
+    sprintf(timestamp_str, "%ld", meta.timestamp);
+    char count_str[5];
+    count_str[0] = timestamp_str[strlen(timestamp_str) - 4];
+    count_str[1] = timestamp_str[strlen(timestamp_str) - 3];
+    count_str[2] = timestamp_str[strlen(timestamp_str) - 2];
+    count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
+    count_str[4] = '\0';
     count = atoi(count_str);
     AES_PCBC_Setup(aes_pcbc, key, key, count);
     //end of aes setup
@@ -196,7 +204,10 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
 
 void full_updateItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data *key) {
     File file;
+    file.filename = malloc(strlen(data->updateItem.filename) + 1);
     strcpy(file.filename, data->updateItem.filename);
+    file.username = malloc(strlen(data->updateItem.username) + 1);
+    strcpy(file.username, data->updateItem.username);
     time_t timestamp;
     time(&timestamp);
     file.timestamp = timestamp;
@@ -205,13 +216,14 @@ void full_updateItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_D
         file.content = malloc(file.size);
         Socket_ReceiveContent(sock, file.content, file.size);
         int count = 0;
-        char count_str[16];
-        char tmp_id[512];
-        strcpy(tmp_id, data->updateItem.filename);
-        char tmp_timestamp[32];
-        sprintf(tmp_timestamp, "%ld", file.timestamp);
-        strcat(tmp_id, tmp_timestamp);
-        hashID(tmp_id, count_str);
+        char timestamp_str[32];
+        sprintf(timestamp_str, "%ld", file.timestamp);
+        char count_str[5];
+        count_str[0] = timestamp_str[strlen(timestamp_str) - 4];
+        count_str[1] = timestamp_str[strlen(timestamp_str) - 3];
+        count_str[2] = timestamp_str[strlen(timestamp_str) - 2];
+        count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
+        count_str[4] = '\0';
         count = atoi(count_str);
         AES_PCBC_Setup(aes_pcbc, key, key, count);
         encryptFileContent(&file, aes_pcbc);
@@ -254,7 +266,9 @@ void Call_Functions(SQLite *sqlite, Socket *sock, int type, AES_PCBC *aes_pcbc, 
             full_signUp(data, sqlite, sock, aes_pcbc, key);
             break;
         case 4:
+            printf("new item\n");
             full_newItem(data, sock, aes_pcbc, key);
+            printf("new item\n");
             break;
         case 6:
             full_deleteItem(data, sock);
