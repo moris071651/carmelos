@@ -6,53 +6,52 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <netinet/in.h>
 #include <string.h>
-
-
-
-// needed small functions
-
-
-
-
-// implementation of the functions
+#include <sys/un.h>
 
 void Socket_Init(Socket *sock) {
     sock->connected = false;
 }
 
-void Socket_Open(Socket *sock, int port) {
-    sock->socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock->socket < 0) {
-        perror("socket");
+void Socket_Connect(Socket *sock, char *filename){
+    struct sockaddr_un addr;
+    sock->socket = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (sock->socket == -1) {
+        perror("ERROR opening socket");
         exit(1);
     }
-
-    struct sockaddr_in server;
-    server.sin_family = AF_INET;
-    server.sin_port = htons(port);
-    server.sin_addr.s_addr = INADDR_ANY;
-
-    if (bind(sock->socket, (struct sockaddr *)&server, sizeof(server)) < 0) {
-        perror("bind");
-        exit(1);
-    }
-
-    if (listen(sock->socket, 5) < 0) {
-        perror("listen");
-        exit(1);
-    }
-
-    struct sockaddr_in client;
-    socklen_t client_size = sizeof(client);
-    sock->socket = accept(sock->socket, (struct sockaddr *)&client, &client_size);
-    if(sock->socket < 0) {
-        perror("accept");
+    addr.sun_family = AF_UNIX;
+    strcpy(addr.sun_path, filename);
+    if (connect(sock->socket, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+        perror("ERROR connecting");
         exit(1);
     }
 
     sock->connected = true;
+}
+
+void Socket_Send(Socket *sock, AllData *data) {
+    if (!sock->connected) {
+        perror("ERROR not connected");
+        exit(1);
+    }
+    write(sock->socket, data, sizeof(AllData));
+}
+
+void Socket_RecieveContent(Socket *sock, char *content, size_t size){
+    if (!sock->connected) {
+        perror("ERROR not connected");
+        exit(1);
+    }
+    read(sock->socket, content, size);
+}
+
+void Socket_Recieve(Socket *sock, AllData *data) {
+    if (!sock->connected) {
+        perror("ERROR not connected");
+        exit(1);
+    }
+    read(sock->socket, data, sizeof(AllData));
 }
 
 void Socket_Close(Socket *sock) {
@@ -60,116 +59,57 @@ void Socket_Close(Socket *sock) {
     sock->connected = false;
 }
 
-void Socket_Wait(Socket *sock) {
+void Socket_SendContent(Socket *sock, char *content, size_t size){
     if (!sock->connected) {
-        return;
-    }
-
-    char buffer[1];
-    //wait until something is being sent but should be able to read the same thing later
-    // should immediately return if something is being sent
-    while (recv(sock->socket, buffer, 1, MSG_PEEK) <= 0) {
-        usleep(1000);
-    }
-}
-
-void Socket_Send(Socket *sock, void *data, size_t size) {
-    if (!sock->connected) {
-        return;
-    }
-
-    if (send(sock->socket, data, size, 0) < 0) {
-        perror("send");
+        perror("ERROR not connected");
         exit(1);
     }
+    write(sock->socket, content, size);
 }
 
-void Socket_Receive(Socket *sock, void *data, size_t size) {
+void Socket_SendFile(Socket *sock, FileSocket *file, char *content) {
     if (!sock->connected) {
-        return;
-    }
-
-    if (recv(sock->socket, data, size, 0) < 0) {
-        perror("recv");
+        perror("ERROR not connected");
         exit(1);
     }
+    AllData *data = malloc(sizeof(AllData));
+    data->type = 8;
+    data->getItem_response = *file;
+    Socket_Send(sock, data);
+    Socket_SendContent(sock, content, file->size);
 }
 
-void Socket_SendFile(Socket *sock, FileSocket *file) {
+void Socket_SendResponse(Socket *sock, userResponse *response) {
     if (!sock->connected) {
-        return;
+        perror("ERROR not connected");
+        exit(1);
     }
-
-    Socket_Send(sock, file->id, sizeof(file->id));
-    Socket_Send(sock, file->filename, sizeof(file->filename));
-    Socket_Send(sock, &file->size, sizeof(file->size));
-    Socket_Send(sock, file->content, sizeof(file->content));
+    AllData *data = malloc(sizeof(AllData));
+    data->type = 3;
+    data->response = *response;
+    Socket_Send(sock, data);
 }
 
-void Socket_ReceiveFile(Socket *sock, FileSocket *file) {
+void Socket_SendFileMeta(Socket *sock, FileMeta_Socket *meta, int type) {
     if (!sock->connected) {
-        return;
+        perror("ERROR not connected");
+        exit(1);
     }
-
-    Socket_Receive(sock, file->id, sizeof(file->id));
-    Socket_Receive(sock, file->filename, sizeof(file->filename));
-    Socket_Receive(sock, &file->size, sizeof(file->size));
-    Socket_Receive(sock, file->content, sizeof(file->content));
-}
-
-void Socket_SendResponse(Socket *sock, Response *response) {
-    if (!sock->connected) {
-        return;
-    }
-
-    Socket_Send(sock, &response->success, sizeof(response->success));
-    Socket_Send(sock, response->message, sizeof(response->message));
+    AllData *data = malloc(sizeof(AllData));
+    data->type = type;
+    data->getItem = *meta;
+    Socket_Send(sock, data);
 }
 
 void Socket_SendFileMetas(Socket *sock, FileMeta_Socket *metas, int count) {
     if (!sock->connected) {
-        return;
+        perror("ERROR not connected");
+        exit(1);
     }
-    Socket_Send(sock, &count, sizeof(count));
-
+    AllData *data = malloc(sizeof(AllData));
+    data->type = 5;
     for (int i = 0; i < count; i++) {
-        Socket_Send(sock, metas[i].id, sizeof(metas[i].id));
-        Socket_Send(sock, metas[i].filename, sizeof(metas[i].filename));
-        Socket_Send(sock, &metas[i].timestamp, sizeof(metas[i].timestamp));
+        data->newItem_response = metas[i];
+        Socket_Send(sock, data);
     }
-}
-
-void Socket_ReceiveFileMeta(Socket *sock, FileMeta_Socket *meta) {
-    if (!sock->connected) {
-        return;
-    }
-
-    Socket_Receive(sock, meta->id, sizeof(meta->id));
-    Socket_Receive(sock, meta->filename, sizeof(meta->filename));
-    Socket_Receive(sock, &meta->timestamp, sizeof(meta->timestamp));
-}
-
-void Socket_RecieveTitle(Socket *sock, char *string) {
-    if (!sock->connected) {
-        return;
-    }
-
-    Socket_Receive(sock, string, 256);
-}
-
-void Socket_SendTitle(Socket *sock, char *string) {
-    if (!sock->connected) {
-        return;
-    }
-
-    Socket_Send(sock, string, 256);
-}
-
-void Socket_RecieveUser(Socket *sock, User *user) {
-    if (!sock->connected) {
-        return;
-    }
-
-    Socket_Receive(sock, user->username, sizeof(user->username));
-    Socket_Receive(sock, user->password, sizeof(user->password));
 }

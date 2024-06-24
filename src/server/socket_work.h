@@ -15,56 +15,31 @@ typedef struct {
 // data structures that will be sent over the network
 // should be limited to know how much to read on the other side
 
-typedef struct {
-    char username[256];
-    char password[256];
-} User;
+#include "socketTypes.h"
 
-typedef struct {
-    char id[512];
-    char filename[256];
-    size_t size;
-    char content[1024];
-} FileSocket;
 
-typedef struct {
-    char id[512];
-    char filename[256];
-    time_t timestamp;
-} FileMeta_Socket;
-
-typedef struct {
-    bool success;
-    char message[256];
-} Response;
 
 void Socket_Init(Socket *sock);
 
-void Socket_Open(Socket *sock, int port);
+void Socket_Open(Socket *sock, char *filename);
 
 void Socket_Close(Socket *sock);
 
-void Socket_Send(Socket *sock, void *data, size_t size);
+void Socket_Send(Socket *sock, AllData *data);
 
-void Socket_Receive(Socket *sock, void *data, size_t size);
+void Socket_Receive(Socket *sock, AllData *data);
 
-void Socket_SendFile(Socket *sock, FileSocket *file);
+void Socket_SendFile(Socket *sock, FileSocket *file, char *content);
 
-void Socket_ReceiveFile(Socket *sock, FileSocket *file);
+void Socket_SendResponse(Socket *sock, userResponse *response);
 
-void Socket_SendResponse(Socket *sock, Response *response);
+void Socket_SendFileMeta(Socket *sock, FileMeta_Socket *meta, int type);
 
 void Socket_SendFileMetas(Socket *sock, FileMeta_Socket *metas, int count);
 
-void Socket_ReceiveFileMeta(Socket *sock, FileMeta_Socket *meta);
+void Socket_RecieveContent(Socket *sock, char *content, size_t size);
 
-void Socket_RecieveTitle(Socket *sock, char *string);
-
-void Socket_Wait(Socket *sock);
-
-void Socket_SendTitle(Socket *sock, char *string);
-
-void Socket_RecieveUser(Socket *sock, User *user);
+void Socket_SendContent(Socket *sock, char *content, size_t size);
 
 
 #endif
