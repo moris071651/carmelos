@@ -8,6 +8,7 @@
 #include "CRC.h"
 #include "socket_work.h"
 
+void full_listItems(AllData *data, Socket *sock, char *username);
 
 void encryptFileContent(File *file, AES_PCBC *aes_pcbc) {
     size_t size = file->size % 16 == 0 ? file->size : file->size + (16 - file->size % 16);

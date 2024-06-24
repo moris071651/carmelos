@@ -32,6 +32,7 @@
 WINDOW* tree_area = NULL;
 WINDOW* editor_area = NULL;
 WINDOW* search_area = NULL;
+WINDOW* new_note_area = NULL;
 
 size_t tree_start = 0;
 size_t tree_select = 0;
@@ -45,9 +46,13 @@ tree_item_t* tree_items_old = NULL;
 bool tree_need_redraw = false;
 bool editor_need_redraw = false;
 bool search_need_redraw = false;
+bool new_note_need_redraw = false;
 
 char search_area_buffer[257] = "";
 size_t search_area_buffer_size = 0;
+
+char new_note_area_buffer[256] = "";
+size_t new_note_area_buffer_size = 0;
 
 char** editor_buffer = NULL;
 size_t editor_buffer_lines = 0;
@@ -64,6 +69,7 @@ enum {
     TREE_AREA,
     EDITOR_AREA,
     SEARCH_AREA,
+    NEW_NOTE_AREA,
 } active_area = TREE_AREA;
 
 user_t current_user = {0};
@@ -102,7 +108,7 @@ static void login_screen(void) {
         mvprintw(maxy - 1, 0, "Now Press s for signup or l for login");
 
         int input;
-        while((input = getch()) != 'l' && input != 's');
+        while((input = getch()) != 'l' && input != 's' && input != CTRL('q'));
         if (input == 'l') {
             if (talk_req_user_login(&user)) {
                 ready = true;
@@ -298,6 +304,20 @@ static void setup_search_area(void) {
     active_area = SEARCH_AREA;
 }
 
+static void setup_new_note_area(void) {
+    size_t maxx = getmaxx(stdscr);
+    size_t maxy = getmaxy(stdscr);
+
+    new_note_area = newwin(3, maxx * 0.8, (maxy - 3) / 2, maxx * 0.1);
+    box(new_note_area, 0, 0);
+    wrefresh(new_note_area);
+    wrefresh(stdscr);
+
+    mvwprintw(new_note_area, 1, 1, "%s", "Name: ");
+
+    active_area = NEW_NOTE_AREA;
+}
+
 static bool handle_tree_keys(int input) {
     if (active_area != TREE_AREA) {
         return false;
@@ -356,6 +376,12 @@ static bool handle_tree_keys(int input) {
 
         tree_items_old = NULL;
         tree_items_size_old = 0;
+    }
+    else if (input == 'n') {
+        setup_new_note_area();
+    }
+    else if (input == KEY_BACKSPACE || input == KEY_DC || input == 'd') {
+        talk_req_delete_note(&tree_items[tree_select]);
     }
     else {
         tree_need_redraw = false;
@@ -832,6 +858,72 @@ static bool handle_search_keys(int input) {
     return true;
 }
 
+static bool handle_new_note_keys(int input) {
+    if (new_note_area == NULL) {
+        return false;
+    }
+
+    if (active_area != NEW_NOTE_AREA) {
+        return false;
+    }
+
+    if (input == KEY_MOUSE) {
+        return false;
+    }
+
+    new_note_need_redraw = true;
+
+    if (input == 10) {
+        tree_item_t note;
+        strcpy(note.name, new_note_area_buffer);
+        talk_req_create_note(&note);
+
+        new_note_area_buffer[0] = '\0';
+        new_note_area_buffer_size = 0;
+
+        wclear(new_note_area);
+        delwin(new_note_area);
+        new_note_area = NULL;
+
+        active_area = TREE_AREA;
+
+        tree_need_redraw = true;
+        editor_need_redraw = true;
+    }
+    else if (input == 27) {
+        new_note_area_buffer[0] = '\0';
+        new_note_area_buffer_size = 0;
+
+        wclear(new_note_area);
+        delwin(new_note_area);
+        new_note_area = NULL;
+
+        active_area = TREE_AREA;
+
+        tree_need_redraw = true;
+        editor_need_redraw = true;
+    }
+    else if ((input == KEY_BACKSPACE || input == KEY_DC || input == 127)
+        && new_note_area_buffer_size != 0) {
+
+        new_note_area_buffer_size--;
+        new_note_area_buffer[new_note_area_buffer_size] = '\0';
+    }
+    else if (input >= 32 && input <= 126
+        && new_note_area_buffer_size < 255) {
+        
+        new_note_area_buffer[new_note_area_buffer_size++] = input;
+        new_note_area_buffer[new_note_area_buffer_size] = '\0';
+    }
+    else {
+        new_note_need_redraw = false;
+
+        return false;
+    }
+
+    return true;
+}
+
 static void handle_keys() {
     int input = getch();
 
@@ -856,6 +948,7 @@ static void handle_keys() {
         // if (handle_editor_mouse(input)) return;
 
         if (handle_search_keys(input)) return;
+        if (handle_new_note_keys(input)) return;
     }
 }
 
@@ -998,12 +1091,37 @@ static void draw_search(void) {
     search_need_redraw = false;
 }
 
+static void draw_new_note(void) {
+    if (new_note_area == NULL) {
+        return;
+    }
+
+    if (!new_note_need_redraw) {
+        box(new_note_area, 0, 0);
+        wrefresh(new_note_area);
+        return;
+    }
+
+    wclear(new_note_area);
+
+    size_t width = getmaxx(new_note_area) - 2;
+    width -= sizeof("Name: ");
+
+    mvwprintw(new_note_area, 1, 1, "%s%s", "Name: ", new_note_area_buffer + (new_note_area_buffer_size > width ? new_note_area_buffer_size - width : 0));
+    
+    box(new_note_area, 0, 0);
+    wrefresh(new_note_area);
+
+    new_note_need_redraw = false;
+}
+
 void draw_interface(void) {
     handle_keys();
 
     draw_tree();
     draw_editor();
     draw_search();
+    draw_new_note();
 }
 
 void tree_set_items(tree_item_t* items, size_t size) {

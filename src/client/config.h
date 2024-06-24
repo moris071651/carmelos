@@ -7,7 +7,7 @@
 #define TREE_VIEW_MAX_WIDTH 50
 
 
-#define TALK_SOCKET_FILE "/tmp/carmelos.sock"
+#define TALK_SOCKET_FILE "socket"
 
 
 #endif // CONFIG_H
