@@ -1,5 +1,6 @@
 #include "interface.h"
 
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -57,6 +58,8 @@ size_t editor_start_y = 0;
 size_t editor_cursor_x = 0;
 size_t editor_cursor_y = 0;
 
+int editor_saving = 0;
+
 enum {
     TREE_AREA,
     EDITOR_AREA,
@@ -67,6 +70,63 @@ user_t current_user = {0};
 editor_item_t current_note = {0};
 
 static void editor_buffer_clear(void);
+
+static void login_screen(void) {
+    int maxx = getmaxx(stdscr);
+    int maxy = getmaxy(stdscr);
+
+    WINDOW* username_area = newwin(3, maxx * 0.7, maxy / 2 - 4, maxx * 0.15);
+    WINDOW* password_area = newwin(3, maxx * 0.7, maxy / 2 + 1, maxx * 0.15);
+
+    user_t user;
+    bool ready = false;
+
+    do {
+        clear();
+        wclear(username_area);
+        wclear(password_area);
+
+        box(username_area, 0, 0);
+        box(password_area, 0, 0);
+
+        refresh();
+        wrefresh(username_area);
+        wrefresh(password_area);
+
+        echo();
+        mvwgetnstr(username_area, 1, 1, user.name, 127);
+
+        noecho();
+        mvwgetnstr(password_area, 1, 1, user.passwd, 127);
+
+        mvprintw(maxy - 1, 0, "Now Press s for signup or l for login");
+
+        int input;
+        while((input = getch()) != 'l' && input != 's');
+        if (input == 'l') {
+            if (talk_req_user_login(&user)) {
+                ready = true;
+            }
+            else {
+                mvprintw(0, 0, "wrong login");
+            }
+        }
+        else if (input == 's') {
+            if (talk_req_user_signup(&user)) {
+                ready = true;
+            }
+            else {
+                mvprintw(0, 0, "Something have gone wrong");
+            }
+        }
+
+    } while (ready);
+
+    delwin(username_area);
+    delwin(password_area);
+
+    clear();
+}
 
 static void destroy_interface(void) {
     if (tree_area != NULL) {
@@ -89,6 +149,9 @@ void setup_interface(void) {
     raw();
     noecho();
     keypad(stdscr, true); 
+    
+    login_screen();
+    
     nodelay(stdscr, true);
 
     // mouse setup
@@ -173,8 +236,7 @@ static void tree_filter_items(const char* query) {
 
     tree_item_t* filtered = malloc(tree_items_size * sizeof(tree_item_t));
     if (!filtered) {
-        // TODO: BETTER LOGGING
-        exit(EXIT_FAILURE + 1);
+        exit(EXIT_FAILURE);
     }
 
     size_t size = 0;
@@ -186,8 +248,7 @@ static void tree_filter_items(const char* query) {
 
     filtered = realloc(filtered, size * sizeof(tree_item_t));
     if (!filtered && size != 0) {
-        // TODO: BETTER LOGGING
-        exit(EXIT_FAILURE + 2);
+        exit(EXIT_FAILURE);
     }
 
     tree_items_old = tree_items;
@@ -267,9 +328,8 @@ static bool handle_tree_keys(int input) {
         }
     }
     else if (input == '\n' || input == 'l') {
-        // talk_request_note();
-
-        // editor_buffer_clear();
+        talk_req_note(&tree_items[tree_select]);
+        editor_buffer_clear();
         active_area = EDITOR_AREA;
     }
     else if (input == KEY_F(1)) {
@@ -466,6 +526,31 @@ void editor_set_note(editor_item_t* note) {
     }
 }
 
+editor_item_t editor_get_note() {
+    editor_item_t note;
+
+    strcpy(note.id, current_note.id);
+    strcpy(note.name, current_note.name);
+    note.date = current_note.date;
+
+    note.content = malloc(1);
+    if (note.content == NULL) {
+        exit(EXIT_FAILURE);
+    }
+    note.content[0] = '\0';
+
+    for (size_t i = 0; i < editor_buffer_lines; i++) {
+        note.content = realloc(note.content, strlen(note.content) + strlen(editor_buffer[i]) + 1);
+        if (note.content == NULL) {
+            exit(EXIT_FAILURE);
+        }
+
+        strcat(note.content, editor_buffer[i]);
+    }
+
+    return note;
+}
+
 static void editor_buffer_insert_char(char ch) {
     char* line = editor_buffer[editor_cursor_y];
     size_t len = strlen(line);
@@ -581,6 +666,14 @@ static bool handle_editor_keys(int input) {
         return false;
     }
 
+    if (editor_buffer == NULL) {
+        return false;
+    }
+
+    if (editor_saving == -1) {
+        return false;
+    }
+
     editor_need_redraw = true;
 
     if (input == KEY_UP
@@ -634,6 +727,11 @@ static bool handle_editor_keys(int input) {
     else if (input == 27) {
         active_area = TREE_AREA;
         tree_need_redraw = true;
+    }
+    else if (input == CTRL('s')) {
+        editor_item_t note = editor_get_note();
+        editor_saving = -1;
+        talk_req_save_note(&note);
     }
     else {
         editor_need_redraw = false;
@@ -761,6 +859,32 @@ static void handle_keys() {
     }
 }
 
+void tree_add_item(tree_item_t* item) {
+    tree_items = realloc(tree_items, (tree_items_size + 1) * sizeof(tree_item_t));
+    if (tree_items == NULL) {
+        exit(EXIT_FAILURE);
+    }
+
+    tree_items[tree_items_size++] = *item;
+
+    tree_need_redraw = true;
+}
+
+void tree_remove_item(tree_item_t* item) {
+    for (size_t i = 0; i < tree_items_size; i++) {
+        if (strcmp(tree_items[i].id, item->id)) {
+            memmove(&tree_items[i], &tree_items[i + 1], tree_items_size - i - 1);
+
+            tree_items = realloc(tree_items, (tree_items_size - 1) * sizeof(tree_item_t));
+            if (tree_items == NULL) {
+                exit(1);
+            }
+
+            tree_need_redraw = true;
+        }
+    }
+}
+
 static void draw_tree(void) {
     if (!tree_need_redraw) {
         return;
@@ -805,6 +929,10 @@ static void draw_editor(void) {
         return;
     }
 
+    if (editor_buffer == NULL) {
+        return;
+    }
+
     size_t maxx = getmaxx(editor_area);
     size_t maxy = getmaxy(editor_area);
     char buff[maxx];
@@ -829,6 +957,18 @@ static void draw_editor(void) {
     wattroff(editor_area, A_STANDOUT);
 
     box(editor_area, 0, 0);
+
+    if (active_area == EDITOR_AREA && current_note.content != NULL) {
+        struct tm* info = localtime(&current_note.date);
+        strftime(buff, 80, "[%d/%m/%Y]", info);
+        size_t width = strlen(buff) + 3;
+        mvwprintw(editor_area, 0, maxx - width, " %s ", buff);
+
+        strncpy(buff, current_note.name, maxx - width - 6);
+        buff[maxx - width - 5] = '\0';
+        mvwprintw(editor_area, 0, 1, " %s ", buff);
+    }
+
     wrefresh(editor_area);
 
     editor_need_redraw = false;
@@ -866,7 +1006,15 @@ void draw_interface(void) {
     draw_search();
 }
 
-void set_tree_items(tree_item_t* items, size_t size) {
+void tree_set_items(tree_item_t* items, size_t size) {
     tree_items = items;
     tree_items_size = size;
+}
+
+void set_user_name(char* name) {
+    strcpy(current_user.name, name);
+}
+
+void editor_change_state(int state) {
+    editor_saving = state;
 }
