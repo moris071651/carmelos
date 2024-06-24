@@ -192,8 +192,6 @@ void setup_interface(void) {
     editor_need_redraw = true;
 
     atexit(destroy_interface);
-
-    strcpy(current_user.name, "Hello");
 }
 
 int sort_alpha(const void* p1, const void* p2) {
