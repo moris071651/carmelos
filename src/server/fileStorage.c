@@ -20,11 +20,6 @@ static void hash_username(char *username, char *hash) {
     sprintf(hash, "%u", crc32);
 }
 
-static void generate_id(File *file, char *id) {
-    unsigned char hash[32];
-    hash_username(file->username, hash);
-    sprintf(id, "%s-%ld-%s", hash, file->timestamp, file->filename);
-}
 
 static void extract_id(char *id, FileMeta *meta) {
     meta->id = malloc(strlen(id) + 1);
@@ -44,6 +39,12 @@ static void extract_id(char *id, FileMeta *meta) {
 
 void initFileStorage() {
     system("mkdir -p " FILE_STORAGE_PATH);
+}
+
+void generate_id(File *file, char *id) {
+    unsigned char hash[32];
+    hash_username(file->username, hash);
+    sprintf(id, "%s-%ld-%s", hash, file->timestamp, file->filename);
 }
 
 void saveFile(File *file) {

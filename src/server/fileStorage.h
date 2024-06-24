@@ -26,6 +26,8 @@ typedef struct {
 
 void initFileStorage();
 
+void generate_id(File *file, char *id);
+
 void saveFile(File *file);
 
 void getFile(char *id, FileContent *file);

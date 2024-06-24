@@ -16,6 +16,7 @@ typedef struct {
     int type;
     char id[512];
     char filename[256];
+    time_t timestamp;
     size_t size;
 } FileSocket;
 
