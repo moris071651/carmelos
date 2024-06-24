@@ -126,7 +126,7 @@ static void login_screen(void) {
             }
         }
 
-    } while (ready);
+    } while (!ready);
 
     delwin(username_area);
     delwin(password_area);
@@ -322,6 +322,10 @@ static bool handle_tree_keys(int input) {
     }
 
     if (tree_items_size == 0) {
+        return false;
+    }
+
+    if (tree_items == NULL) {
         return false;
     }
 
@@ -1133,4 +1137,8 @@ void set_user_name(char* name) {
 
 void editor_change_state(int state) {
     editor_saving = state;
+}
+
+user_t* get_user(void) {
+    return &current_user;
 }
