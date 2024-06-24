@@ -4,12 +4,16 @@
 #include "types.h"
 #include "config.h"
 
-void set_tree_items(tree_item_t* items, size_t size);
-
 void setup_interface(void);
-void login_interface(void);
 void draw_interface(void);
 
-void editor_set_note(char* note);
+void set_user_name(char* name);
+
+editor_item_t editor_get_note();
+void editor_change_state(int state);
+void tree_set_items(tree_item_t* items, size_t size);
+void editor_set_note(editor_item_t* note);
+void tree_add_item(tree_item_t* item);
+void tree_remove_item(tree_item_t* item);
 
 #endif // INTERFACE_H

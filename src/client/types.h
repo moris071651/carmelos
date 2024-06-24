@@ -10,13 +10,13 @@ typedef struct {
 } user_t;
 
 typedef struct {
-    size_t id;
+    char id[512];
     time_t date;
     char name[128];
 } tree_item_t;
 
 typedef struct {
-    size_t id;
+    char id[512];
     time_t date;
     char* content;
     char name[128];

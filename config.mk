@@ -2,7 +2,7 @@ CC = gcc
 
 MODE = debug
 
-CFLAGS = -Wall -Wextra
+CFLAGS = 
 DEBUG_CFLAGS = -g3 -O0
 RELEASE_CFLAGS = -O2 -march=native 
 
