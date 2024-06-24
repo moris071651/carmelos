@@ -13,7 +13,7 @@ void Socket_Init(Socket *sock) {
     sock->connected = false;
 }
 
-void Socket_Connect(Socket *sock, char *filename){
+void Socket_Open(Socket *sock, char *filename){
     struct sockaddr_un addr;
     sock->socket = socket(AF_UNIX, SOCK_STREAM, 0);
     if (sock->socket == -1) {
@@ -38,7 +38,7 @@ void Socket_Send(Socket *sock, AllData *data) {
     write(sock->socket, data, sizeof(AllData));
 }
 
-void Socket_RecieveContent(Socket *sock, char *content, size_t size){
+void Socket_ReceiveContent(Socket *sock, char *content, size_t size){
     if (!sock->connected) {
         perror("ERROR not connected");
         exit(1);
@@ -46,7 +46,7 @@ void Socket_RecieveContent(Socket *sock, char *content, size_t size){
     read(sock->socket, content, size);
 }
 
-void Socket_Recieve(Socket *sock, AllData *data) {
+void Socket_Receive(Socket *sock, AllData *data) {
     if (!sock->connected) {
         perror("ERROR not connected");
         exit(1);

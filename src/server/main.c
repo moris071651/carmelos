@@ -75,7 +75,7 @@ void full_signUp(AllData *data, SQLite *sqlite, Socket *sock, AES_PCBC *aes_pcbc
     strcpy(username, data->signup.username);
     strcpy(password, data->signup.password);
     hashPassword(password, password);
-    int success = 0;
+    bool success = 0;
     login(sqlite, username, password, &success);
     if (success) {
         userResponse response;
@@ -102,7 +102,7 @@ void full_login(AllData *data, SQLite *sqlite, Socket *sock, AES_PCBC *aes_pcbc,
     strcpy(username, data->login.username);
     strcpy(password, data->login.password);
     hashPassword(password, password);
-    int success = 0;
+    bool success = 0;
     login(sqlite, username, password, &success);
     if (success) {
         userResponse response;
@@ -131,7 +131,7 @@ void full_newItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
     file.size = data->newItem.size;
     if (file.size > 0) {
         file.content = malloc(file.size);
-        Socket_RecieveContent(sock, file.content, file.size);
+        Socket_ReceiveContent(sock, file.content, file.size);
         int count = 0;
         char count_str[16];
         char tmp_id[512];
@@ -202,7 +202,7 @@ void full_updateItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_D
     file.size = data->updateItem.size;
     if (file.size > 0) {
         file.content = malloc(file.size);
-        Socket_RecieveContent(sock, file.content, file.size);
+        Socket_ReceiveContent(sock, file.content, file.size);
         int count = 0;
         char count_str[16];
         char tmp_id[512];
@@ -289,7 +289,7 @@ int main(int argc, char *argv[]) {
     AES_PCBC_Init(&aes_pcbc);
     while(1){
         AllData data;
-        Socket_Recieve(&sock, &data);
+        Socket_Receive(&sock, &data);
         Call_Functions(&sqlite, &sock, data.type, &aes_pcbc, &key, &data);
     }
 }

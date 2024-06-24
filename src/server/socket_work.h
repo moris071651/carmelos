@@ -37,7 +37,7 @@ void Socket_SendFileMeta(Socket *sock, FileMeta_Socket *meta, int type);
 
 void Socket_SendFileMetas(Socket *sock, FileMeta_Socket *metas, int count);
 
-void Socket_RecieveContent(Socket *sock, char *content, size_t size);
+void Socket_ReceiveContent(Socket *sock, char *content, size_t size);
 
 void Socket_SendContent(Socket *sock, char *content, size_t size);
 
