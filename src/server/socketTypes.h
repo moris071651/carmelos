@@ -4,7 +4,19 @@
 #include <stdbool.h>
 #include <time.h>
 
-
+enum {
+    LOGIN_TYPE,
+    SIGNUP_TYPE,
+    RESPONSE_TYPE,
+    NEWITEM_TYPE,
+    NEWITEM_RESPONSE_TYPE,
+    DELITEM_TYPE,
+    DELITEM_RESPONSE_TYPE,
+    GETITEM_TYPE,
+    GETITEM_RESPONSE_TYPE,
+    UPDATEITEM_TYPE,
+    UPDATEITEM_RESPONSE_TYPE,
+};
 
 typedef struct {
     int type;

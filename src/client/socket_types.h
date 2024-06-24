@@ -1,10 +1,8 @@
-#ifndef SOCKETTYPES_H
-#define SOCKETTYPES_H
+#ifndef SOCKET_TYPES_H
+#define SOCKET_TYPES_H
 
 #include <stdbool.h>
 #include <time.h>
-
-
 
 typedef struct {
     int type;
@@ -31,6 +29,20 @@ typedef struct {
     char username[256];
 } userResponse;
 
+enum {
+    LOGIN_TYPE,
+    SIGNUP_TYPE,
+    RESPONSE_TYPE,
+    NEWITEM_TYPE,
+    NEWITEM_RESPONSE_TYPE,
+    DELITEM_TYPE,
+    DELITEM_RESPONSE_TYPE,
+    GETITEM_TYPE,
+    GETITEM_RESPONSE_TYPE,
+    UPDATEITEM_TYPE,
+    UPDATEITEM_RESPONSE_TYPE,
+};
+
 typedef union {
     int type;
     User login;
@@ -46,4 +58,6 @@ typedef union {
     FileMeta_Socket updateItem_response;
 } AllData;
 
-#endif
+#endif // SOCKET_TYPES_H
+
+// no, i use structs not text 
