@@ -1,6 +1,5 @@
 #include "interface.h"
 
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -26,7 +25,7 @@
 #endif
 
 #ifndef TREE_VIEW_SEARCH_PROMPT
-#define TREE_VIEW_SEARCH_PROMPT "SEARCH:"
+#define TREE_VIEW_SEARCH_PROMPT "SEARCH: "
 #endif
 
 WINDOW* tree_area = NULL;
@@ -63,6 +62,9 @@ enum {
     EDITOR_AREA,
     SEARCH_AREA,
 } active_area = TREE_AREA;
+
+user_t current_user = {0};
+editor_item_t current_note = {0};
 
 static void editor_buffer_clear(void);
 
@@ -121,6 +123,8 @@ void setup_interface(void) {
     editor_need_redraw = true;
 
     atexit(destroy_interface);
+
+    strcpy(current_user.name, "Hello");
 }
 
 int sort_alpha(const void* p1, const void* p2) {
@@ -385,10 +389,16 @@ static void editor_buffer_clear(void) {
     editor_need_redraw = true;
 }
 
-void editor_set_note(char* note) {
+void editor_set_note(editor_item_t* note) {
+    if (!note) {
+        exit(EXIT_FAILURE);
+    }
+
     editor_buffer_clear();
 
-    if (note == NULL) {
+    current_note = *note;
+
+    if (note->content == NULL) {
         editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char *));
         if (!editor_buffer) {
             exit(EXIT_FAILURE);
@@ -400,9 +410,11 @@ void editor_set_note(char* note) {
         }
 
         editor_buffer_lines += 1;
+
+        return;
     }
 
-    char* start = note;
+    char* start = note->content;
     char* end = strchr(start, '\n');
 
     while (end != NULL) {
@@ -619,7 +631,7 @@ static bool handle_editor_keys(int input) {
     else if (input >= 32 && input <= 126) {
         editor_buffer_insert_char(input);
     }
-    else if (input == CTRL('t')) {
+    else if (input == 27) {
         active_area = TREE_AREA;
         tree_need_redraw = true;
     }
@@ -707,7 +719,7 @@ static bool handle_search_keys(int input) {
         search_area_buffer_size--;
         search_area_buffer[search_area_buffer_size] = '\0';
     }
-    else if (isprint(input)
+    else if (input >= 32 && input <= 126
         && search_area_buffer_size < 256) {
         
         search_area_buffer[search_area_buffer_size++] = input;
@@ -754,17 +766,16 @@ static void draw_tree(void) {
         return;
     }
 
+    size_t maxx = getmaxx(tree_area);
+    size_t maxy = getmaxy(tree_area);
+    char buff[maxx];
+
+    werase(tree_area);
+
     for (size_t i = tree_start, line = 1; i < tree_items_size; i++) {
         if (tree_select == i) {
             wattron(tree_area, A_STANDOUT);
         }
-
-        size_t maxx = getmaxx(tree_area);
-        char buff[maxx];
-
-        memset(buff, ' ', maxx - 2);
-        buff[maxx - 1] = '\0';
-        mvwprintw(tree_area, line, 1, "%s", buff);
 
         strncpy(buff, tree_items[i].name, maxx - 2);
         buff[maxx - 1] = '\0';
@@ -774,12 +785,16 @@ static void draw_tree(void) {
 
         wattroff(tree_area, A_STANDOUT);
 
-        if (line > getmaxy(tree_area)) {
+        if (line > maxy) {
             break;
         }
     }
 
     box(tree_area, 0, 0);
+
+    strncpy(buff, current_user.name, maxx - 4);
+    mvwprintw(tree_area, 0, 1, " %s ", buff);
+
     wrefresh(tree_area);
 
     tree_need_redraw = false;
@@ -792,15 +807,11 @@ static void draw_editor(void) {
 
     size_t maxx = getmaxx(editor_area);
     size_t maxy = getmaxy(editor_area);
+    char buff[maxx];
 
     werase(editor_area);
 
     for (size_t i = editor_start_y, line = 1; i < editor_buffer_lines; i++) {
-        char buff[maxx];
-
-        memset(buff, ' ', maxx - 2);
-        buff[maxx - 1] = '\0';
-        mvwprintw(editor_area, line, 1, "%s", buff);
 
         strncpy(buff, editor_buffer[i], maxx - 2);
         buff[maxx - 1] = '\0';
@@ -839,7 +850,7 @@ static void draw_search(void) {
     size_t width = getmaxx(search_area) - 2;
     width -= sizeof(TREE_VIEW_SEARCH_PROMPT);
 
-    mvwprintw(search_area, 1, 1, "%s %s", TREE_VIEW_SEARCH_PROMPT, search_area_buffer + (search_area_buffer_size > width ? search_area_buffer_size - width : 0));
+    mvwprintw(search_area, 1, 1, "%s%s", TREE_VIEW_SEARCH_PROMPT, search_area_buffer + (search_area_buffer_size > width ? search_area_buffer_size - width : 0));
     
     box(search_area, 0, 0);
     wrefresh(search_area);

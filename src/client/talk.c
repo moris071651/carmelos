@@ -16,8 +16,8 @@
 
 int socketfd = 0;
 
-void destroy_talk(void) {
-
+static void destroy_talk(void) {
+    close(socketfd);
 }
 
 void setup_talk(void) {
@@ -36,4 +36,6 @@ void setup_talk(void) {
         fprintf(stderr, "connect failed\n");
         exit(EXIT_FAILURE);
     }
+
+    atexit(destroy_talk);
 }
