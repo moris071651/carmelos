@@ -179,6 +179,7 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
     FileMeta_Socket meta;
     meta = data->getItem;
     getFile(meta.id, &content);
+    printf("size: %d\n", content.size);
     //set up the aes
     if (content.size > 0){
         int count = 0;

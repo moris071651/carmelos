@@ -55,6 +55,8 @@ int main(int argc, char *argv[]) {
     char id[100];
     strcpy(id, data.newItem_response.id);
 
+    printf("id: %s\n", id);
+
     //get the file
     AllData *data5 = malloc(sizeof(AllData));
     data5->type = 8;
