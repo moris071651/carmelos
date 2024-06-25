@@ -196,8 +196,8 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
         decryptFileContent(&content, aes_pcbc);
     }
     else{
-        content.content = malloc(11);
-        strcpy(content.content, "no content");
+        content.content = malloc(1);
+        content.content[0] = '\0';
     }
     FileSocket file;
     file.type = 9;

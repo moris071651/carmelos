@@ -52,6 +52,19 @@ int main(int argc, char *argv[]) {
     Socket_Send(&sock, data1);
     Socket_Receive(&sock, &data);
     printf("type: %d\n", data.type);
+    char id[100];
+    strcpy(id, data.newItem_response.id);
+
+    //get the file
+    AllData *data5 = malloc(sizeof(AllData));
+    data5->type = 8;
+    strcpy(data5->getItem.id, id);
+    data5->getItem.timestamp = data.newItem_response.timestamp;
+    Socket_Send(&sock, data5);
+    Socket_Receive(&sock, &data);
+    printf("type: %d\n", data.type);
+
+
 
     //test with a file
     char content[6] = "hello";
