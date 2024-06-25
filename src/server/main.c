@@ -22,7 +22,6 @@ void encryptFileContent(File *file, AES_PCBC *aes_pcbc) {
 }
 
 void decryptFileContent(FileContent *content, AES_PCBC *aes_pcbc) {
-    printf("size: %ld\n", content->size);
     content->size = content->size % 16 == 0 ? content->size : content->size + (16 - content->size % 16);
     char content_tmp[content->size + 1];
     strcpy(content_tmp, content->content);
@@ -128,8 +127,6 @@ void full_login(AllData *data, SQLite *sqlite, Socket *sock, AES_PCBC *aes_pcbc,
 
 void full_newItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data *key) {
     File file;
-    printf("filename: %s\n", data->newItem.filename);
-    printf("size: %ld\n", data->newItem.size);
     file.filename = malloc(strlen(data->newItem.filename) + 1);
     strcpy(file.filename, data->newItem.filename);
     file.username = malloc(strlen(data->newItem.username) + 1);
@@ -153,21 +150,8 @@ void full_newItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
         count_str[4] = '\0';
         count = atoi(count_str);
         AES_PCBC_Setup(aes_pcbc, key, key, count);
-        printf("aes->key: %s\n", aes_pcbc->key);
-        printf("aes->iv: %s\n", aes_pcbc->iv);
-        printf("count: %d\n", count);
-        printf("content: %s\n", file.content);
         encryptFileContent(&file, aes_pcbc);
         file.content[file.size] = '\0';
-        printf("content12: %s\n", file.content);
-        printf("size12: %ld\n", file.size);
-        //just for test decrypt
-        FileContent content;
-        content.size = file.size;
-        content.content = malloc(file.size);
-        strcpy(content.content, file.content);
-        decryptFileContent(&content, aes_pcbc);
-        printf("content: %s\n", content.content);
     } else {
         file.content = malloc(1);
         file.content[0] = '\0';
@@ -195,12 +179,10 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
     FileMeta_Socket meta;
     meta = data->getItem;
     getFile(meta.id, &content);
-    printf("size: %ld\n", content.size);
     //set up the aes
     int count = 0;
     char timestamp_str[32];
     sprintf(timestamp_str, "%ld", meta.timestamp);
-    printf("timestamp: %s\n", timestamp_str);
     char count_str[5];
     count_str[0] = timestamp_str[strlen(timestamp_str) - 4];
     count_str[1] = timestamp_str[strlen(timestamp_str) - 3];
@@ -208,15 +190,9 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
     count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
     count_str[4] = '\0';
     count = atoi(count_str);
-    printf("count: %d\n", count);
     AES_PCBC_Setup(aes_pcbc, key, key, count);
-    printf("aes->key: %s\n", aes_pcbc->key);
-    printf("aes->iv: %s\n", aes_pcbc->iv);
     //end of aes setup
-    printf("size: %ld\n", content.size);
-    printf("content: %s\n", content.content);
     decryptFileContent(&content, aes_pcbc);
-    printf("content: %s\n", content.content);
     FileSocket file;
     file.type = 9;
     strcpy(file.id, meta.id);
@@ -237,6 +213,7 @@ void full_updateItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_D
     file.timestamp = timestamp;
     file.size = data->updateItem.size;
     if (file.size > 0) {
+        printf("size: %d\n", file.size);
         file.content = malloc(file.size);
         Socket_ReceiveContent(sock, file.content, file.size);
         int count = 0;

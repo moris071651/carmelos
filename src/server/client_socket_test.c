@@ -41,6 +41,18 @@ int main(int argc, char *argv[]) {
     printf("type: %d\n", data.type);
     printf("login: %s\n", data.response.username);
 
+    //test with a null file
+
+    AllData *data1 = malloc(sizeof(AllData));
+    data1->type = 4;
+    data1->newItem.size = 0;
+    strcpy(data1->newItem.filename, "test3.txt");
+    strcpy(data1->newItem.username, "test");
+    data1->newItem.timestamp = time(NULL);
+    Socket_Send(&sock, data1);
+    Socket_Receive(&sock, &data);
+    printf("type: %d\n", data.type);
+
     //test with a file
     char content[6] = "hello";
     content[5] = '\0';
@@ -68,7 +80,22 @@ int main(int argc, char *argv[]) {
     Socket_ReceiveContent(&sock, content2, data.getItem_response.size);
     printf("content: %s\n", content2);
     printf("type: %d\n", data.type);
+
+    //update the file
+    char content3[6] = "world";
+    content3[5] = '\0';
+    AllData *data4 = malloc(sizeof(AllData));
+    data4->type = 10;
+    strcpy(data4->updateItem.id, name);
+    data4->updateItem.size = 5;
+    data4->updateItem.timestamp = data.newItem_response.timestamp;
+    Socket_Send(&sock, data4);
+    Socket_SendContent(&sock, content3, 5);
+    Socket_Receive(&sock, &data);
+    printf("type: %d\n", data.type);
+
     Socket_Close(&sock);
+
     
     
 
