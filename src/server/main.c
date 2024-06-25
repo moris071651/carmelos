@@ -149,6 +149,7 @@ void full_newItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
         count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
         count_str[4] = '\0';
         count = atoi(count_str);
+        printf("count: %d\n", count);
         AES_PCBC_Setup(aes_pcbc, key, key, count);
         encryptFileContent(&file, aes_pcbc);
         file.content[file.size] = '\0';
@@ -179,9 +180,6 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
     FileMeta_Socket meta;
     meta = data->getItem;
     getFile(meta.id, &content);
-    printf("size: %d\n", content.size);
-    printf("content: %s\n", content.content);
-    printf("id: %s\n", meta.id);
     //set up the aes
     if (content.size > 0){
         int count = 0;
@@ -194,6 +192,7 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
         count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
         count_str[4] = '\0';
         count = atoi(count_str);
+        printf("count: %d\n", count);
         AES_PCBC_Setup(aes_pcbc, key, key, count);
         //end of aes setup
         decryptFileContent(&content, aes_pcbc);
