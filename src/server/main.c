@@ -16,18 +16,19 @@ void encryptFileContent(File *file, AES_PCBC *aes_pcbc) {
     strcpy(content_tmp, file->content);
     content_tmp[file->size] = '\0';
     AES_PCBC_Encrypt(aes_pcbc, content_tmp, file->size);
-    file->content = malloc(size);
+    file->content = malloc(size + 1);
     strcpy(file->content, content_tmp);
     file->size = size;
 }
 
 void decryptFileContent(FileContent *content, AES_PCBC *aes_pcbc) {
+    printf("size: %ld\n", content->size);
     content->size = content->size % 16 == 0 ? content->size : content->size + (16 - content->size % 16);
     char content_tmp[content->size + 1];
     strcpy(content_tmp, content->content);
     content_tmp[content->size] = '\0';
     AES_PCBC_Decrypt(aes_pcbc, content_tmp, content->size);
-    content->content = realloc(content->content, content->size);
+    content->content = malloc(content->size) + 1;
     strcpy(content->content, content_tmp);
     // file->size = strlen(file->content);
 }
@@ -139,7 +140,8 @@ void full_newItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
     file.size = data->newItem.size;
     if (file.size > 0) {
         file.content = malloc(file.size) + 1;
-        Socket_ReceiveContent(sock, file.content, file.size);
+        Socket_ReceiveContent(sock, file.content, file.size + 1);
+        file.content[file.size] = '\0';
         int count = 0;
         char timestamp_str[32];
         sprintf(timestamp_str, "%ld", file.timestamp);
@@ -151,7 +153,21 @@ void full_newItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
         count_str[4] = '\0';
         count = atoi(count_str);
         AES_PCBC_Setup(aes_pcbc, key, key, count);
+        printf("aes->key: %s\n", aes_pcbc->key);
+        printf("aes->iv: %s\n", aes_pcbc->iv);
+        printf("count: %d\n", count);
+        printf("content: %s\n", file.content);
         encryptFileContent(&file, aes_pcbc);
+        file.content[file.size] = '\0';
+        printf("content12: %s\n", file.content);
+        printf("size12: %ld\n", file.size);
+        //just for test decrypt
+        FileContent content;
+        content.size = file.size;
+        content.content = malloc(file.size);
+        strcpy(content.content, file.content);
+        decryptFileContent(&content, aes_pcbc);
+        printf("content: %s\n", content.content);
     } else {
         file.content = malloc(1);
         file.content[0] = '\0';
@@ -179,10 +195,12 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
     FileMeta_Socket meta;
     meta = data->getItem;
     getFile(meta.id, &content);
+    printf("size: %ld\n", content.size);
     //set up the aes
     int count = 0;
     char timestamp_str[32];
     sprintf(timestamp_str, "%ld", meta.timestamp);
+    printf("timestamp: %s\n", timestamp_str);
     char count_str[5];
     count_str[0] = timestamp_str[strlen(timestamp_str) - 4];
     count_str[1] = timestamp_str[strlen(timestamp_str) - 3];
@@ -190,9 +208,15 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
     count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
     count_str[4] = '\0';
     count = atoi(count_str);
+    printf("count: %d\n", count);
     AES_PCBC_Setup(aes_pcbc, key, key, count);
+    printf("aes->key: %s\n", aes_pcbc->key);
+    printf("aes->iv: %s\n", aes_pcbc->iv);
     //end of aes setup
+    printf("size: %ld\n", content.size);
+    printf("content: %s\n", content.content);
     decryptFileContent(&content, aes_pcbc);
+    printf("content: %s\n", content.content);
     FileSocket file;
     file.type = 9;
     strcpy(file.id, meta.id);
@@ -268,12 +292,12 @@ void Call_Functions(SQLite *sqlite, Socket *sock, int type, AES_PCBC *aes_pcbc, 
         case 4:
             printf("new item\n");
             full_newItem(data, sock, aes_pcbc, key);
-            printf("new item\n");
             break;
         case 6:
             full_deleteItem(data, sock);
             break;
         case 8:
+            printf("get item\n");
             full_getItem(data, sock, aes_pcbc, key);
             break;
         case 10:
