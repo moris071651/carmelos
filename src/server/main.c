@@ -29,7 +29,7 @@ void decryptFileContent(FileContent *content, AES_PCBC *aes_pcbc) {
     AES_PCBC_Decrypt(aes_pcbc, content_tmp, content->size);
     content->content = malloc(content->size) + 1;
     strcpy(content->content, content_tmp);
-    // file->size = strlen(file->content);
+    content->size = strlen(content->content);
 }
 
 void hashPassword(char *password, char *hash) {
@@ -149,7 +149,6 @@ void full_newItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
         count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
         count_str[4] = '\0';
         count = atoi(count_str);
-        printf("count: %d\n", count);
         AES_PCBC_Setup(aes_pcbc, key, key, count);
         encryptFileContent(&file, aes_pcbc);
         file.content[file.size] = '\0';
@@ -192,11 +191,11 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
         count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
         count_str[4] = '\0';
         count = atoi(count_str);
-        printf("count: %d\n", count);
         AES_PCBC_Setup(aes_pcbc, key, key, count);
         //end of aes setup
         decryptFileContent(&content, aes_pcbc);
         printf("content: %s\n", content.content);
+        printf("size: %d\n", content.size);
     }
     else{
         content.content = malloc(1);
@@ -220,7 +219,6 @@ void full_updateItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_D
     file.timestamp = data->updateItem.timestamp;
     file.size = data->updateItem.size;
     if (file.size > 0) {
-        printf("size: %d\n", file.size);
         file.content = malloc(file.size);
         Socket_ReceiveContent(sock, file.content, file.size);
         int count = 0;
@@ -233,7 +231,6 @@ void full_updateItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_D
         count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
         count_str[4] = '\0';
         count = atoi(count_str);
-        printf("count: %d\n", count);
         AES_PCBC_Setup(aes_pcbc, key, key, count);
         encryptFileContent(&file, aes_pcbc);
     } else {
