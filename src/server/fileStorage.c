@@ -75,6 +75,8 @@ void getFile(char *id, FileContent *file) {
     file->content = malloc(file->size);
     fread(file->content, 1, file->size, f);
     fclose(f);
+    printf("File size: %d\n", file->size);
+    printf("File content: %s\n", file->content);
 }
 
 void deleteFile(char *id) {
