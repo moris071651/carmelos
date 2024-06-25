@@ -218,9 +218,7 @@ void full_updateItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_D
     strcpy(file.filename, data->updateItem.filename);
     file.username = malloc(strlen(data->updateItem.username) + 1);
     strcpy(file.username, data->updateItem.username);
-    time_t timestamp;
-    time(&timestamp);
-    file.timestamp = timestamp;
+    file.timestamp = data->updateItem.timestamp;
     file.size = data->updateItem.size;
     if (file.size > 0) {
         printf("size: %d\n", file.size);
