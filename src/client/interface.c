@@ -483,8 +483,6 @@ void editor_set_note(editor_item_t* note) {
     current_note.date = note->date;
     current_note.content = note->content;
 
-    fprintf(f, "Note content: %p\n", note->content);
-
     if (note->content == NULL) {
         editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char *));
         if (!editor_buffer) {
@@ -495,9 +493,6 @@ void editor_set_note(editor_item_t* note) {
         if (!editor_buffer[editor_buffer_lines]) {
             exit(EXIT_FAILURE);
         }
-
-        fprintf(f, "Why am i here?\n");
-        fclose(f);
 
         editor_buffer_lines += 1;
 
