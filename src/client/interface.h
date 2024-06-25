@@ -8,6 +8,7 @@ void setup_interface(void);
 void draw_interface(void);
 
 void set_user_name(char* name);
+user_t* get_user(void);
 
 editor_item_t editor_get_note();
 void editor_change_state(int state);

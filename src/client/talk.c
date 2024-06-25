@@ -106,8 +106,8 @@ bool talk_req_user_signup(user_t* user) {
 
     data.type = SIGNUP_TYPE;
 
-    strcpy(data.login.username, user->name);
-    strcpy(data.login.password, user->passwd);
+    strcpy(data.signup.username, user->name);
+    strcpy(data.signup.password, user->passwd);
 
     talk_send_data(&data);
 
@@ -150,6 +150,7 @@ void talk_req_create_note(tree_item_t* item) {
     data.type = NEWITEM_TYPE;
 
     strcpy(data.newItem.filename, item->name);
+    strcpy(data.newItem.id, get_user()->name);
 
     talk_send_data(&data);
 }
