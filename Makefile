@@ -35,6 +35,9 @@ build/server/%.o: src/server/%.c src/server/%.h
 clean:
 	rm -fr build/client/*.o build/server/*.o bin/*.out
 
+cleanup:
+	rm -fr files socket test data.db
+
 $(BUILD_DIRS):
 	mkdir -p $@
 
