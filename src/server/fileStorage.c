@@ -72,9 +72,10 @@ void getFile(char *id, FileContent *file) {
     fseek(f, 0, SEEK_END);
     file->size = ftell(f);
     fseek(f, 0, SEEK_SET);
-    file->content = malloc(file->size);
+    file->content = malloc(file->size + 1);
     fread(file->content, 1, file->size, f);
     fclose(f);
+    file->content[file->size] = '\0';
     printf("File size: %d\n", file->size);
     printf("File content: %s\n", file->content);
 }
