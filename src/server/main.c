@@ -233,6 +233,7 @@ void full_updateItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_D
         count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
         count_str[4] = '\0';
         count = atoi(count_str);
+        printf("count: %d\n", count);
         AES_PCBC_Setup(aes_pcbc, key, key, count);
         encryptFileContent(&file, aes_pcbc);
     } else {
