@@ -87,12 +87,6 @@ static AllData talk_read_data(void) {
         exit(EXIT_FAILURE);
     }
 
-    if (data.type != NON_TYPE) {
-        FILE* f = fopen("test", "a+");
-        fprintf(f, "%d\n", data.type);
-        fclose(f);
-    }
-
     return data;
 }
 
@@ -204,11 +198,20 @@ static void talk_handle_get_item(AllData* data) {
         exit(EXIT_FAILURE);
     }
 
-    talk_unset_nonblock();
-    if (read(socketfd, &data, data->getItem_response.size + 1) != data->getItem_response.size + 1) {
-        exit(EXIT_FAILURE);
+    // FILE* f = fopen("test6", "w");
+    // fprintf(f, "%zu\n", data->getItem_response.size);
+    // fflush(f);
+    // fclose(f);
+
+    if (data->getItem_response.size != 0) {
+        talk_unset_nonblock();
+        if (read(socketfd, note.content, data->getItem_response.size + 1) != data->getItem_response.size + 1) {
+            exit(EXIT_FAILURE);
+        }
+        talk_set_nonblock();
     }
-    talk_set_nonblock();
+
+    note.content[data->getItem_response.size] = '\0';
 
     editor_set_note(&note);
 

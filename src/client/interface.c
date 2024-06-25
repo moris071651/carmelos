@@ -470,13 +470,20 @@ static void editor_buffer_clear(void) {
 }
 
 void editor_set_note(editor_item_t* note) {
+    FILE* f = fopen("test1", "w+");
+
     if (!note) {
         exit(EXIT_FAILURE);
     }
 
     editor_buffer_clear();
 
-    current_note = *note;
+    strcpy(current_note.id, note->id);
+    strcpy(current_note.name, note->name);
+    current_note.date = note->date;
+    current_note.content = note->content;
+
+    fprintf(f, "Note content: %p\n", note->content);
 
     if (note->content == NULL) {
         editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char *));
@@ -488,6 +495,9 @@ void editor_set_note(editor_item_t* note) {
         if (!editor_buffer[editor_buffer_lines]) {
             exit(EXIT_FAILURE);
         }
+
+        fprintf(f, "Why am i here?\n");
+        fclose(f);
 
         editor_buffer_lines += 1;
 
@@ -544,6 +554,11 @@ void editor_set_note(editor_item_t* note) {
 
         editor_buffer_lines += 1;
     }
+
+    fprintf(f, "Editor Buffer: %p\n", editor_buffer);
+    fprintf(f, "lines: %zu\n", editor_buffer_lines);
+    fprintf(f, "Should be here..\n");
+    fclose(f);
 }
 
 editor_item_t editor_get_note() {
@@ -679,10 +694,6 @@ static bool handle_editor_keys(int input) {
     }
 
     if (input == KEY_MOUSE) {
-        return false;
-    }
-
-    if (editor_buffer == NULL) {
         return false;
     }
 
