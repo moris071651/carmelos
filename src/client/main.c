@@ -6,8 +6,6 @@
 #include "interface.h"
 
 int main(int argc, char* arv[]) {
-    
-
     setup_talk();
     setup_interface();
 
