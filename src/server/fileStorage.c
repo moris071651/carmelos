@@ -87,6 +87,7 @@ void deleteFile(char *id) {
 void listFiles(char *username, FileMeta **files, int *count) {
     char hash[32];
     hash_username(username, hash);
+    printf("hash: %s\n", hash);
     DIR *dir = opendir(FILE_STORAGE_PATH);
     if (dir == NULL) {
         return;
@@ -97,6 +98,7 @@ void listFiles(char *username, FileMeta **files, int *count) {
         if (strncmp(entry->d_name, hash, strlen(hash)) == 0) {
             *count += 1;
             *files = realloc(*files, *count * sizeof(FileMeta));
+            printf("file: %s\n", entry->d_name);
             extract_id(entry->d_name, *files + *count - 1);
         }
     }
