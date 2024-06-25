@@ -14,6 +14,7 @@ typedef struct {
     int type;
     char id[512];
     char filename[256];
+    char username[256];
     time_t timestamp;
     size_t size;
 } FileSocket;
@@ -30,8 +31,8 @@ typedef struct {
     char username[256];
 } userResponse;
 
-
 enum {
+    NON_TYPE,
     LOGIN_TYPE = 1,
     SIGNUP_TYPE,
     RESPONSE_TYPE,

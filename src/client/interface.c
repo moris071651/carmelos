@@ -321,14 +321,6 @@ static bool handle_tree_keys(int input) {
         return false;
     }
 
-    if (tree_items_size == 0) {
-        return false;
-    }
-
-    if (tree_items == NULL) {
-        return false;
-    }
-
     if (input == KEY_MOUSE) {
         return false;
     }
@@ -1024,10 +1016,6 @@ static void draw_editor(void) {
         return;
     }
 
-    if (editor_buffer == NULL) {
-        return;
-    }
-
     size_t maxx = getmaxx(editor_area);
     size_t maxy = getmaxy(editor_area);
     char buff[maxx];
@@ -1045,11 +1033,13 @@ static void draw_editor(void) {
         }
     }
 
-    char tmp[10];
-    wattron(editor_area, A_STANDOUT);
-    mvwinnstr(editor_area, editor_cursor_y + 1, editor_cursor_x + 1, tmp, 1);
-    mvwprintw(editor_area, editor_cursor_y + 1, editor_cursor_x + 1, "%s", tmp);
-    wattroff(editor_area, A_STANDOUT);
+    if (active_area == EDITOR_AREA) {
+        char tmp[10];
+        wattron(editor_area, A_STANDOUT);
+        mvwinnstr(editor_area, editor_cursor_y + 1, editor_cursor_x + 1, tmp, 1);
+        mvwprintw(editor_area, editor_cursor_y + 1, editor_cursor_x + 1, "%s", tmp);
+        wattroff(editor_area, A_STANDOUT);
+    }
 
     box(editor_area, 0, 0);
 

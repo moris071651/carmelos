@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include <errno.h>
 #include <unistd.h>
 #include <sys/un.h>
 #include <sys/types.h>
@@ -72,8 +73,32 @@ static AllData talk_read_data(void) {
     AllData data;
     size_t size = sizeof(AllData);
 
-    if (read(socketfd, &data, size) != size) {
+    int status = read(socketfd, &data, size);
+
+    if(errno != EAGAIN && status != size) {
         exit(EXIT_FAILURE);
+    }
+
+    if (errno == EAGAIN) {
+        data.type = NON_TYPE;
+    }
+
+    if (status == -1) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            data.type = NON_TYPE;
+        }
+        else {
+            exit(EXIT_FAILURE);
+        }
+    }
+    else if (status < size) {
+        exit(EXIT_FAILURE);
+    }
+
+    if (data.type != NON_TYPE) {
+        FILE* f = fopen("test", "a+");
+        fprintf(f, "%d\n", data.type);
+        fclose(f);
     }
 
     return data;
@@ -93,7 +118,7 @@ bool talk_req_user_login(user_t* user) {
 
     if (data.type == RESPONSE_TYPE && strlen(data.response.username) != 0) {
         set_user_name(data.response.username);
-        talk_set_nonblock();
+        // talk_set_nonblock();
         return true;
     }
     else {
@@ -115,7 +140,7 @@ bool talk_req_user_signup(user_t* user) {
 
     if (data.type == RESPONSE_TYPE && strlen(data.response.username) != 0) {
         set_user_name(data.response.username);
-        talk_set_nonblock();
+        // talk_set_nonblock();
         return true;
     }
     else {
@@ -225,6 +250,10 @@ void handle_communication(void) {
 
         case UPDATEITEM_RESPONSE_TYPE:
             editor_change_state(0);
+        break;
+
+        case NON_TYPE:
+
         break;
 
         default:
