@@ -198,11 +198,6 @@ static void talk_handle_get_item(AllData* data) {
         exit(EXIT_FAILURE);
     }
 
-    // FILE* f = fopen("test6", "w");
-    // fprintf(f, "%zu\n", data->getItem_response.size);
-    // fflush(f);
-    // fclose(f);
-
     if (data->getItem_response.size != 0) {
         talk_unset_nonblock();
         if (read(socketfd, note.content, data->getItem_response.size + 1) != data->getItem_response.size + 1) {
