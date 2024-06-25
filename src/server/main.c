@@ -250,7 +250,9 @@ void full_updateItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_D
 void full_listItems(AllData *data, Socket *sock, char *username) {
     FileMeta *files;
     int count;
+    printf("username: %s\n", username);
     listFiles(username, &files, &count);
+    printf("made it here!");
     FileMeta_Socket metas[count];
     for (int i = 0; i < count; i++) {
         metas[i].type = 5;

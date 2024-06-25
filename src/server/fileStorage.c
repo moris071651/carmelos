@@ -76,8 +76,6 @@ void getFile(char *id, FileContent *file) {
     fread(file->content, 1, file->size, f);
     fclose(f);
     file->content[file->size] = '\0';
-    printf("File size: %d\n", file->size);
-    printf("File content: %s\n", file->content);
 }
 
 void deleteFile(char *id) {
