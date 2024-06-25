@@ -75,14 +75,6 @@ static AllData talk_read_data(void) {
 
     int status = read(socketfd, &data, size);
 
-    if(errno != EAGAIN && status != size) {
-        exit(EXIT_FAILURE);
-    }
-
-    if (errno == EAGAIN) {
-        data.type = NON_TYPE;
-    }
-
     if (status == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
             data.type = NON_TYPE;
@@ -118,7 +110,7 @@ bool talk_req_user_login(user_t* user) {
 
     if (data.type == RESPONSE_TYPE && strlen(data.response.username) != 0) {
         set_user_name(data.response.username);
-        // talk_set_nonblock();
+        talk_set_nonblock();
         return true;
     }
     else {
@@ -140,7 +132,7 @@ bool talk_req_user_signup(user_t* user) {
 
     if (data.type == RESPONSE_TYPE && strlen(data.response.username) != 0) {
         set_user_name(data.response.username);
-        // talk_set_nonblock();
+        talk_set_nonblock();
         return true;
     }
     else {
@@ -176,6 +168,7 @@ void talk_req_create_note(tree_item_t* item) {
 
     strcpy(data.newItem.filename, item->name);
     strcpy(data.newItem.id, get_user()->name);
+    data.newItem.size = 0;
 
     talk_send_data(&data);
 }
