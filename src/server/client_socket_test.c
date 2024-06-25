@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
     Socket_Send(&sock, data5);
     Socket_Receive(&sock, &data);
     printf("type: %d\n", data.type);
+    printf("size: %d\n", data.getItem_response.size);
 
 
 

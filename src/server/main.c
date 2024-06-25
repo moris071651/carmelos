@@ -194,6 +194,7 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
         AES_PCBC_Setup(aes_pcbc, key, key, count);
         //end of aes setup
         decryptFileContent(&content, aes_pcbc);
+        printf("content: %s\n", content.content);
     }
     else{
         content.content = malloc(1);
