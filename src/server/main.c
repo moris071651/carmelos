@@ -180,19 +180,21 @@ void full_getItem(AllData *data, Socket *sock, AES_PCBC *aes_pcbc, AES_PCBC_Data
     meta = data->getItem;
     getFile(meta.id, &content);
     //set up the aes
-    int count = 0;
-    char timestamp_str[32];
-    sprintf(timestamp_str, "%ld", meta.timestamp);
-    char count_str[5];
-    count_str[0] = timestamp_str[strlen(timestamp_str) - 4];
-    count_str[1] = timestamp_str[strlen(timestamp_str) - 3];
-    count_str[2] = timestamp_str[strlen(timestamp_str) - 2];
-    count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
-    count_str[4] = '\0';
-    count = atoi(count_str);
-    AES_PCBC_Setup(aes_pcbc, key, key, count);
-    //end of aes setup
-    decryptFileContent(&content, aes_pcbc);
+    if (content.size > 0){
+        int count = 0;
+        char timestamp_str[32];
+        sprintf(timestamp_str, "%ld", meta.timestamp);
+        char count_str[5];
+        count_str[0] = timestamp_str[strlen(timestamp_str) - 4];
+        count_str[1] = timestamp_str[strlen(timestamp_str) - 3];
+        count_str[2] = timestamp_str[strlen(timestamp_str) - 2];
+        count_str[3] = timestamp_str[strlen(timestamp_str) - 1];
+        count_str[4] = '\0';
+        count = atoi(count_str);
+        AES_PCBC_Setup(aes_pcbc, key, key, count);
+        //end of aes setup
+        decryptFileContent(&content, aes_pcbc);
+    }
     FileSocket file;
     file.type = 9;
     strcpy(file.id, meta.id);
