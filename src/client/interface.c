@@ -473,7 +473,7 @@ void editor_set_note(editor_item_t* note) {
     FILE* f = fopen("test1", "w+");
 
     if (!note) {
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE + 10);
     }
 
     editor_buffer_clear();
@@ -486,12 +486,12 @@ void editor_set_note(editor_item_t* note) {
     if (note->content == NULL) {
         editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char *));
         if (!editor_buffer) {
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE + 113);
         }
 
         editor_buffer[editor_buffer_lines] = strdup("");
         if (!editor_buffer[editor_buffer_lines]) {
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE + 134);
         }
 
         editor_buffer_lines += 1;
@@ -507,12 +507,12 @@ void editor_set_note(editor_item_t* note) {
 
         editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char*));
         if (!editor_buffer) {
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE + 67);
         }
 
         editor_buffer[editor_buffer_lines] = malloc(line_length + 1);
         if (!editor_buffer[editor_buffer_lines]) {
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE + 78);
         }
 
         strncpy(editor_buffer[editor_buffer_lines], start, line_length);
@@ -527,24 +527,24 @@ void editor_set_note(editor_item_t* note) {
     if (*start != '\0') {
         editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char *));
         if (!editor_buffer) {
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE + 90);
         }
 
         editor_buffer[editor_buffer_lines] = strdup(start);
         if (!editor_buffer[editor_buffer_lines]) {
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE + 45);
         }
 
         editor_buffer_lines += 1;
     } else if (end != start) {
         editor_buffer = realloc(editor_buffer, (editor_buffer_lines + 1) * sizeof(char *));
         if (!editor_buffer) {
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE + 14);
         }
 
         editor_buffer[editor_buffer_lines] = strdup("");
         if (!editor_buffer[editor_buffer_lines]) {
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE + 99);
         }
 
         editor_buffer_lines += 1;

@@ -95,7 +95,8 @@ void listFiles(char *username, FileMeta **files, int *count) {
     struct dirent *entry;
     *count = 0;
     while ((entry = readdir(dir)) != NULL) {
-        if (strncmp(entry->d_name, hash, strlen(hash)) == 0) {
+
+        if ((strncmp(entry->d_name, hash, strlen(hash))) == 0) {
             *count += 1;
             *files = realloc(*files, *count * sizeof(FileMeta));
             printf("file: %s\n", entry->d_name);

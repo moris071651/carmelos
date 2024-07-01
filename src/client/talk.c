@@ -161,7 +161,7 @@ void talk_req_create_note(tree_item_t* item) {
     data.type = NEWITEM_TYPE;
 
     strcpy(data.newItem.filename, item->name);
-    strcpy(data.newItem.id, get_user()->name);
+    strcpy(data.newItem.username, get_user()->name);
     data.newItem.size = 0;
 
     talk_send_data(&data);
@@ -173,7 +173,10 @@ void talk_req_save_note(editor_item_t* item) {
 
     strcpy(data.updateItem.id, item->id);
     strcpy(data.updateItem.filename, item->name);
+    strcpy(data.updateItem.username, get_user()->name);
     data.updateItem.size = strlen(item->content);
+    data.updateItem.timestamp = item->date;
+
 
     talk_send_data(&data);
 
@@ -195,13 +198,13 @@ static void talk_handle_get_item(AllData* data) {
 
     note.content = malloc(data->getItem_response.size + 1);
     if (note.content == NULL) {
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE + 9);
     }
 
     if (data->getItem_response.size != 0) {
         talk_unset_nonblock();
-        if (read(socketfd, note.content, data->getItem_response.size + 1) != data->getItem_response.size + 1) {
-            exit(EXIT_FAILURE);
+        if (read(socketfd, note.content, data->getItem_response.size) != data->getItem_response.size) {
+            exit(EXIT_FAILURE + 8);
         }
         talk_set_nonblock();
     }
