@@ -1,4 +1,5 @@
 #include "logger.h"
+#include "cleanup.h"
 #include "config.h"
 
 #include <time.h>
@@ -22,6 +23,8 @@ FILE* log_file = NULL;
 bool logger_inside_block = false;
 
 static void logger_destroy(void) {
+    logger_inside_block = false;
+    fflush(log_file);
     fclose(log_file);
 }
 
@@ -35,7 +38,7 @@ void logger_setup(void) {
         exit(EXIT_FAILURE);
     }
 
-    atexit(logger_destroy);
+    cleanup_add(logger_destroy);
 }
 
 void logger_set_level(int level) {
@@ -50,7 +53,7 @@ static void logger_print_prompt(const char* level) {
     char buffer[124];
     time_t now = time(NULL);
     struct tm* t = localtime(&now);
-    strftime(buffer, 124, "%Y-%m-%d %H:%M:%S", t);
+    strftime(buffer, 124, "%H:%M:%S %d/%m/%Y", t);
 
     fprintf(log_file, "LEVEL=[%s] TIME=[%s]\n", level, buffer);
 }
@@ -59,17 +62,20 @@ static void logger_print_prompt_lf(const char* file, int line, const char* level
     char buffer[124];
     time_t now = time(NULL);
     struct tm* t = localtime(&now);
-    strftime(buffer, 124, "%Y-%m-%d %H:%M:%S", t);
+    strftime(buffer, 124, "%H:%M:%S %d/%m/%Y", t);
 
     fprintf(log_file, "LEVEL=[%s] TIME=[%s] FILE=[%s] LINE=[%d]\n", level, buffer, file, line);
 }
 
 static int logger_print_information(const char* format, va_list args) {
-    return vfprintf(log_file, format, args);
+    int result = vfprintf(log_file, format, args);
+    fprintf(log_file, "\n");
+    return result;
 }
 
 static void logger_print_separator(void) {
-    fprintf(log_file, "\n\n");
+    fprintf(log_file, "\n");
+    fflush(log_file);
 }
 
 void logger_start_block(void) {
@@ -85,7 +91,7 @@ void logger_end_block(void) {
 }
 
 int logger_debug(const char* format, ...) {
-    if (log_level <= LOGGER_LEVEL_DEBUG) {
+    if (log_level > LOGGER_LEVEL_DEBUG) {
         return 0;
     }
 
@@ -106,7 +112,7 @@ int logger_debug(const char* format, ...) {
 }
 
 int logger_debug_lf(const char* file, int line, const char* format, ...) {
-    if (log_level <= LOGGER_LEVEL_DEBUG) {
+    if (log_level > LOGGER_LEVEL_DEBUG) {
         return 0;
     }
 
@@ -127,7 +133,7 @@ int logger_debug_lf(const char* file, int line, const char* format, ...) {
 }
 
 int logger_info(const char* format, ...) {
-    if (log_level <= LOGGER_LEVEL_INFO) {
+    if (log_level > LOGGER_LEVEL_INFO) {
         return 0;
     }
     
@@ -148,7 +154,7 @@ int logger_info(const char* format, ...) {
 }
 
 int logger_info_lf(const char* file, int line, const char* format, ...) {
-    if (log_level <= LOGGER_LEVEL_DEBUG) {
+    if (log_level > LOGGER_LEVEL_INFO) {
         return 0;
     }
 
@@ -169,7 +175,7 @@ int logger_info_lf(const char* file, int line, const char* format, ...) {
 }
 
 int logger_warning(const char* format, ...) {
-    if (log_level <= LOGGER_LEVEL_WARNING) {
+    if (log_level > LOGGER_LEVEL_WARNING) {
         return 0;
     }
 
@@ -190,7 +196,7 @@ int logger_warning(const char* format, ...) {
 }
 
 int logger_warning_lf(const char* file, int line, const char* format, ...) {
-    if (log_level <= LOGGER_LEVEL_DEBUG) {
+    if (log_level > LOGGER_LEVEL_WARNING) {
         return 0;
     }
 
@@ -211,7 +217,7 @@ int logger_warning_lf(const char* file, int line, const char* format, ...) {
 }
 
 int logger_error(const char* format, ...) {
-    if (log_level <= LOGGER_LEVEL_ERROR) {
+    if (log_level > LOGGER_LEVEL_ERROR) {
         return 0;
     }
 
@@ -232,7 +238,7 @@ int logger_error(const char* format, ...) {
 }
 
 int logger_error_lf(const char* file, int line, const char* format, ...) {
-    if (log_level <= LOGGER_LEVEL_DEBUG) {
+    if (log_level > LOGGER_LEVEL_ERROR) {
         return 0;
     }
 
@@ -253,7 +259,7 @@ int logger_error_lf(const char* file, int line, const char* format, ...) {
 }
 
 int logger_fatal(const char* format, ...) {
-    if (log_level <= LOGGER_LEVEL_FATAL) {
+    if (log_level > LOGGER_LEVEL_FATAL) {
         return 0;
     }
 
@@ -274,7 +280,7 @@ int logger_fatal(const char* format, ...) {
 }
 
 int logger_fatal_lf(const char* file, int line, const char* format, ...) {
-    if (log_level <= LOGGER_LEVEL_DEBUG) {
+    if (log_level > LOGGER_LEVEL_FATAL) {
         return 0;
     }
 
