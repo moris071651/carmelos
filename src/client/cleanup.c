@@ -1,4 +1,5 @@
 #include "cleanup.h"
+#include "logger.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,6 +75,12 @@ static void cleanup_SIGABRT_handler(int signum) {
         exit(EXIT_FAILURE);
     }
 
+    logger_start_block();
+    logger_fatal("You encountered a SIGABRT error");
+    logger_fatal("The program decided to self-destruct");
+    logger_fatal("Please investigate what caused this exit");
+    logger_end_block();
+
     cleanup_execute();
 
     signal(signum, SIG_DFL);
@@ -85,6 +92,12 @@ static void cleanup_SIGFPE_handler(int signum) {
         exit(EXIT_FAILURE);
     }
 
+    logger_start_block();
+    logger_fatal("You encountered a SIGFPE error");
+    logger_fatal("The process hit a floating-point exception");
+    logger_fatal("Please check the calculations that caused this");
+    logger_end_block();
+
     cleanup_execute();
 
     signal(signum, SIG_DFL);
@@ -95,6 +108,12 @@ static void cleanup_SIGILL_handler(int signum) {
     if (signum != SIGILL) {
         exit(EXIT_FAILURE);
     }
+    
+    logger_start_block();
+    logger_fatal("You encountered a SIGILL error");
+    logger_fatal("We executed an illegal instruction.");
+    logger_fatal("Please investigate what went wrong.");
+    logger_end_block();
 
     cleanup_execute();
 
@@ -107,6 +126,12 @@ static void cleanup_SIGINT_handler(int signum) {
         exit(EXIT_FAILURE);
     }
 
+    logger_start_block();
+    logger_fatal("You encountered a SIGINT error");
+    logger_fatal("Time to clean up and gracefully exit");
+    logger_fatal("Adios, amigos!");
+    logger_end_block();
+
     cleanup_execute();
 
     signal(signum, SIG_DFL);
@@ -118,6 +143,13 @@ static void cleanup_SIGSEGV_handler(int signum) {
         exit(EXIT_FAILURE);
     }
 
+    logger_start_block();
+    logger_fatal("You encountered a SIGSEGV error");
+    logger_fatal("Looks like we tried to access forbidden memory");
+    logger_fatal("And now the process is crashing harder than a Windows 98 PC");
+    logger_fatal("Please use 'coredumpctl debug' for more information");
+    logger_end_block();
+
     cleanup_execute();
 
     signal(signum, SIG_DFL);
@@ -128,6 +160,29 @@ static void cleanup_SIGTERM_handler(int signum) {
     if (signum != SIGTERM) {
         exit(EXIT_FAILURE);
     }
+
+    logger_start_block();
+    logger_fatal("You encountered a SIGTERM error");
+    logger_fatal("The process is being terminated");
+    logger_fatal("Looks like someone's pulling the plug!");
+    logger_end_block();
+
+    cleanup_execute();
+
+    signal(signum, SIG_DFL);
+    kill(getpid(), signum);
+}
+
+static void cleanup_SIGPIPE_handler(int signum) {
+    if (signum != SIGPIPE) {
+        exit(EXIT_FAILURE);
+    }
+
+    logger_start_block();
+    logger_fatal("You encountered a SIGPIPE error");
+    logger_fatal("Probably the server exited unexpectedly");    
+    logger_fatal("Please check the server for more information");    
+    logger_end_block();
 
     cleanup_execute();
 
@@ -142,6 +197,7 @@ void cleanup_setup(void) {
     signal(SIGINT, cleanup_SIGINT_handler);
     signal(SIGSEGV, cleanup_SIGSEGV_handler);
     signal(SIGTERM, cleanup_SIGTERM_handler);
+    signal(SIGPIPE, cleanup_SIGPIPE_handler);
 
     atexit(cleanup_execute);
 }
