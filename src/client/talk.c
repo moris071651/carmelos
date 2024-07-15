@@ -1,6 +1,8 @@
 #include "talk.h"
 #include "types.h"
 #include "config.h"
+#include "logger.h"
+#include "cleanup.h"
 
 #include "interface.h"
 #include "socket_types.h"
@@ -23,32 +25,35 @@
 
 int socketfd = -1;
 
-static void destroy_talk(void) {
+static void talk_destroy(void) {
     close(socketfd);
 }
 
-void setup_talk(void) {
+void talk_setup(void) {
     if (access(TALK_SOCKET_FILE, F_OK) != 0) {
-        fprintf(stderr, "Server Not Running\n");
+        logger_fatal("Server not running. Exiting...");
         exit(EXIT_FAILURE);
     }
     
     socketfd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (socketfd == -1) {
-        fprintf(stderr, "Socket failed\n");
+        logger_fatal("Socket creation failed. Exiting...");
         exit(EXIT_FAILURE);
     }
 
     struct sockaddr_un server_addr;
     server_addr.sun_family = AF_UNIX;
     strcpy(server_addr.sun_path, TALK_SOCKET_FILE);
+    logger_debug("Server address: %s", TALK_SOCKET_FILE);
 
     if (connect(socketfd, (struct sockaddr*) &server_addr, sizeof(server_addr)) == -1) {
-        fprintf(stderr, "connect failed\n");
+        logger_fatal("Connection to server failed. Exiting...");
         exit(EXIT_FAILURE);
     }
 
-    atexit(destroy_talk);
+    logger_info("Connected to server successfully");
+    
+    cleanup_add(talk_destroy);
 }
 
 static void talk_set_nonblock(void) {
@@ -62,29 +67,47 @@ static void talk_unset_nonblock(void) {
 }
 
 static void talk_send_data(const AllData* data) {
-    size_t size = sizeof(AllData);
+    logger_debug("Sending message with type: %d", data->type);
 
-    if (write(socketfd, data, size) != size) {
+    size_t size = sizeof(AllData);
+    ssize_t status = write(socketfd, data, size);
+
+    if (status != size) {
+        if (status == -1) {
+            logger_fatal("write() failed with error: %s", strerror(errno));
+        }
+        else {
+            logger_fatal("write() less bytes (%zd) than expected (%zu)", status, size);
+        }
+
         exit(EXIT_FAILURE);
     }
+
+    logger_info("Message send successfully");
 }
 
 static AllData talk_read_data(void) {
     AllData data;
     size_t size = sizeof(AllData);
 
-    int status = read(socketfd, &data, size);
+    ssize_t status = read(socketfd, &data, size);
 
     if (status == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
             data.type = NON_TYPE;
         }
         else {
+            logger_fatal("read() failed with error: %s", strerror(errno));
             exit(EXIT_FAILURE);
         }
     }
     else if (status < size) {
+        logger_fatal("read() less bytes (%d) than expected (%zu)", status, size);
         exit(EXIT_FAILURE);
+    }
+    else {
+        logger_debug("Receiving message with type: %d", data.type);
+        logger_info("Message received successfully");
     }
 
     return data;
@@ -94,7 +117,8 @@ bool talk_req_user_login(user_t* user) {
     AllData data;
 
     data.type = LOGIN_TYPE;
-
+    
+    logger_debug("Attempting to login, username: %s", user->name);
     strcpy(data.login.username, user->name);
     strcpy(data.login.password, user->passwd);
 
@@ -103,13 +127,15 @@ bool talk_req_user_login(user_t* user) {
     data = talk_read_data();
 
     if (data.type == RESPONSE_TYPE && strlen(data.response.username) != 0) {
+        logger_info("Login successful, username: %s", data.response.username);
         set_user_name(data.response.username);
         talk_set_nonblock();
         return true;
     }
-    else {
-        return false;
-    }
+
+    logger_error("Login failed, invalid response or empty username");
+    
+    return false;
 }
 
 bool talk_req_user_signup(user_t* user) {
@@ -117,6 +143,7 @@ bool talk_req_user_signup(user_t* user) {
 
     data.type = SIGNUP_TYPE;
 
+    logger_debug("Attempting to signup, username: %s", user->name);
     strcpy(data.signup.username, user->name);
     strcpy(data.signup.password, user->passwd);
 
@@ -125,38 +152,18 @@ bool talk_req_user_signup(user_t* user) {
     data = talk_read_data();
 
     if (data.type == RESPONSE_TYPE && strlen(data.response.username) != 0) {
+        logger_info("Signup successful, username: %s", data.response.username);
         set_user_name(data.response.username);
         talk_set_nonblock();
         return true;
     }
-    else {
-        return false;
-    }
+
+    logger_error("Signup failed, invalid response or empty username");
+    
+    return false;
 }
 
-void talk_req_note(tree_item_t* item) {
-    AllData data;
-    data.type = GETITEM_TYPE;
-
-    strcpy(data.getItem.id, item->id);
-    strcpy(data.getItem.filename, item->name);
-    data.getItem.timestamp = item->date;
-
-    talk_send_data(&data);
-}
-
-void talk_req_delete_note(tree_item_t* item) {
-    AllData data;
-    data.type = DELITEM_TYPE;
-
-    strcpy(data.delItem.id, item->id);
-    strcpy(data.delItem.filename, item->name);
-    data.delItem.timestamp = item->date;
-
-    talk_send_data(&data);
-}
-
-void talk_req_create_note(tree_item_t* item) {
+void talk_req_note_create(tree_item_t* item) {
     AllData data;
     data.type = NEWITEM_TYPE;
 
@@ -167,7 +174,7 @@ void talk_req_create_note(tree_item_t* item) {
     talk_send_data(&data);
 }
 
-void talk_req_save_note(editor_item_t* item) {
+void talk_req_note_save(editor_item_t* item) {
     AllData data;
     data.type = UPDATEITEM_TYPE;
 
@@ -177,7 +184,6 @@ void talk_req_save_note(editor_item_t* item) {
     data.updateItem.size = strlen(item->content);
     data.updateItem.timestamp = item->date;
 
-
     talk_send_data(&data);
 
     if (write(socketfd, item->content, data.updateItem.size) != data.updateItem.size) {
@@ -185,40 +191,73 @@ void talk_req_save_note(editor_item_t* item) {
     }
 }
 
+void talk_req_note_delete(tree_item_t* item) {
+    AllData data;
+    data.type = DELITEM_TYPE;
+
+    strcpy(data.delItem.id, item->id);
+    strcpy(data.delItem.filename, item->name);
+    data.delItem.timestamp = item->date;
+
+    talk_send_data(&data);
+}
+
+void talk_req_note_content(tree_item_t* item) {
+    AllData data;
+    data.type = GETITEM_TYPE;
+
+    strcpy(data.getItem.id, item->id);
+    strcpy(data.getItem.filename, item->name);
+    data.getItem.timestamp = item->date;
+
+    talk_send_data(&data);
+}
+
 static void talk_handle_get_item(AllData* data) {
     if (data->type != GETITEM_RESPONSE_TYPE) {
+        logger_fatal("This should not be possible");
         exit(EXIT_FAILURE);
     }
 
     editor_item_t note;
-
     strcpy(note.id, data->getItem_response.id);
     strcpy(note.name, data->getItem_response.filename);
     note.date = data->getItem_response.timestamp;
 
     note.content = malloc(data->getItem_response.size + 1);
     if (note.content == NULL) {
-        exit(EXIT_FAILURE + 9);
+        logger_fatal("Memory allocation failed");
+        exit(EXIT_FAILURE);
     }
 
     if (data->getItem_response.size != 0) {
         talk_unset_nonblock();
-        if (read(socketfd, note.content, data->getItem_response.size) != data->getItem_response.size) {
-            exit(EXIT_FAILURE + 8);
+
+        ssize_t status = read(socketfd, note.content, data->getItem_response.size);
+
+        if (status == -1) {
+            logger_fatal("read() failed with error: %s", strerror(errno));
+            exit(EXIT_FAILURE);
         }
+        else if (status < data->getItem_response.size) {
+            logger_fatal("Read less bytes (%d) than expected (%zu)", status, data->getItem_response.size);
+            exit(EXIT_FAILURE);
+        }
+        else {
+            logger_info("Received content successfully");
+        }
+
         talk_set_nonblock();
     }
 
     note.content[data->getItem_response.size] = '\0';
-
     editor_set_note(&note);
-
     free(note.content);
 }
 
-void handle_communication(void) {
+void talk_handler(void) {
     AllData data = talk_read_data();
-
+    
     tree_item_t tree_item;
 
     switch (data.type) {
@@ -246,12 +285,10 @@ void handle_communication(void) {
             editor_change_state(0);
         break;
 
-        case NON_TYPE:
-
-        break;
+        case NON_TYPE: break;
 
         default:
-            exit(EXIT_FAILURE);
+            logger_warning("Unknown message type: %d", data.type);
         break;
     }
 }

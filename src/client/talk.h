@@ -5,15 +5,15 @@
 
 #include <stdbool.h>
 
-void setup_talk(void);
-void handle_communication(void);
+void talk_setup(void);
+void talk_handler(void);
 
 bool talk_req_user_login(user_t* user);
 bool talk_req_user_signup(user_t* user);
 
-void talk_req_note(tree_item_t* item);
-void talk_req_create_note(tree_item_t* item);
-void talk_req_delete_note(tree_item_t* item);
-void talk_req_save_note(editor_item_t* item);
+void talk_req_note_content(tree_item_t* item);
+void talk_req_note_create(tree_item_t* item);
+void talk_req_note_delete(tree_item_t* item);
+void talk_req_note_save(editor_item_t* item);
 
 #endif // TALK_H
