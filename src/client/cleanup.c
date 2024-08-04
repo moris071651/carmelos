@@ -108,7 +108,7 @@ static void cleanup_SIGILL_handler(int signum) {
     if (signum != SIGILL) {
         exit(EXIT_FAILURE);
     }
-    
+
     logger_start_block();
     logger_fatal("You encountered a SIGILL error");
     logger_fatal("We executed an illegal instruction.");
@@ -180,8 +180,8 @@ static void cleanup_SIGPIPE_handler(int signum) {
 
     logger_start_block();
     logger_fatal("You encountered a SIGPIPE error");
-    logger_fatal("Probably the server exited unexpectedly");    
-    logger_fatal("Please check the server for more information");    
+    logger_fatal("Probably the server exited unexpectedly");
+    logger_fatal("Please check the server for more information");
     logger_end_block();
 
     cleanup_execute();
@@ -201,3 +201,4 @@ void cleanup_setup(void) {
 
     atexit(cleanup_execute);
 }
+

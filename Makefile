@@ -6,7 +6,7 @@ CLIENT_OBJ = $(patsubst src/client/%.c,build/client/%.o,$(CLIENT_SRC))
 SERVER_SRC = $(wildcard src/server/*.c)
 SERVER_OBJ = $(patsubst src/server/%.c,build/server/%.o,$(SERVER_SRC))
 
-all: $(NEEDED_DIRS) $(MODE)
+all: $(BUILD_DIRS) $(MODE)
 
 debug: CFLAGS += $(DEBUG_CFLAGS)
 debug: bin/client.out bin/server.out

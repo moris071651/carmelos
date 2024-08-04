@@ -2,9 +2,9 @@ CC = gcc
 
 MODE = debug
 
-CFLAGS = 
+CFLAGS = -D_POSIX_C_SOURCE -Wall -std=c99
 DEBUG_CFLAGS = -g3 -O0
-RELEASE_CFLAGS = -O2 -march=native 
+RELEASE_CFLAGS = -O2 -DNDEBUG
 
 CLIENT_LDFLAGS = -lncurses
 SERVER_LDFLAGS = -lcrypto -lsqlite3

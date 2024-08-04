@@ -12,10 +12,10 @@
 #define LOGGER_LOG_FILE "/var/log/client.carmelos.log"
 #endif
 
-#ifdef DEBUG
-int log_level = LOGGER_LEVEL_DEBUG;
-#else
+#ifdef NDEBUG
 int log_level = LOGGER_LEVEL_INFO;
+#else
+int log_level = LOGGER_LEVEL_DEBUG;
 #endif
 
 FILE* log_file = NULL;
@@ -50,21 +50,16 @@ void logger_set_level(int level) {
 }
 
 static void logger_print_prompt(const char* level) {
+    if (logger_inside_block) {
+        return;
+    }
+
     char buffer[124];
     time_t now = time(NULL);
     struct tm* t = localtime(&now);
     strftime(buffer, 124, "%H:%M:%S %d/%m/%Y", t);
 
     fprintf(log_file, "LEVEL=[%s] TIME=[%s]\n", level, buffer);
-}
-
-static void logger_print_prompt_lf(const char* file, int line, const char* level) {
-    char buffer[124];
-    time_t now = time(NULL);
-    struct tm* t = localtime(&now);
-    strftime(buffer, 124, "%H:%M:%S %d/%m/%Y", t);
-
-    fprintf(log_file, "LEVEL=[%s] TIME=[%s] FILE=[%s] LINE=[%d]\n", level, buffer, file, line);
 }
 
 static int logger_print_information(const char* format, va_list args) {
@@ -74,6 +69,10 @@ static int logger_print_information(const char* format, va_list args) {
 }
 
 static void logger_print_separator(void) {
+    if (logger_inside_block) {
+        return;
+    }
+
     fprintf(log_file, "\n");
     fflush(log_file);
 }
@@ -95,41 +94,58 @@ int logger_debug(const char* format, ...) {
         return 0;
     }
 
-    if (!logger_inside_block) {
-        logger_print_prompt("DEBUG");
-    }
+    logger_print_prompt("DEBUG");
     
     va_list args;
     va_start(args, format);
     int result = logger_print_information(format, args);
     va_end(args);
 
-    if (!logger_inside_block) {
-        logger_print_separator();
-    }
+    logger_print_separator();
 
     return result;
 }
 
-int logger_debug_lf(const char* file, int line, const char* format, ...) {
+int logger_trace(const char* file, int line) {
     if (log_level > LOGGER_LEVEL_DEBUG) {
         return 0;
     }
 
-    if (!logger_inside_block) {
-        logger_print_prompt_lf(file, line, "DEBUG");
+    logger_print_prompt("TRACE");
+    
+    int result = fprintf(log_file, "File: '%s', Line: %d\n", file, line);
+
+    logger_print_separator();
+
+    return result;
+}
+
+int logger_assert(bool expr, const char* format, ...) {
+    if (log_level > LOGGER_LEVEL_DEBUG) {
+        return 0;
     }
+
+    if (expr == true) {
+        return 0;
+    }
+
+#ifdef NDEBUG
+    return 0;
+
+#else
+    logger_print_prompt("ASSERT");
     
     va_list args;
     va_start(args, format);
     int result = logger_print_information(format, args);
     va_end(args);
 
-    if (!logger_inside_block) {
-        logger_print_separator();
-    }
+    logger_print_separator();
+
+    abort();
 
     return result;
+#endif
 }
 
 int logger_info(const char* format, ...) {
@@ -137,81 +153,31 @@ int logger_info(const char* format, ...) {
         return 0;
     }
     
-    if (!logger_inside_block) {
-        logger_print_prompt("INFO");
-    }
+    logger_print_prompt("INFO");
 
     va_list args;
     va_start(args, format);
     int result = logger_print_information(format, args);
     va_end(args);
 
-    if (!logger_inside_block) {
-        logger_print_separator();
-    }
-
-    return result;
-}
-
-int logger_info_lf(const char* file, int line, const char* format, ...) {
-    if (log_level > LOGGER_LEVEL_INFO) {
-        return 0;
-    }
-
-    if (!logger_inside_block) {
-        logger_print_prompt_lf(file, line, "INFO");
-    }
-    
-    va_list args;
-    va_start(args, format);
-    int result = logger_print_information(format, args);
-    va_end(args);
-
-    if (!logger_inside_block) {
-        logger_print_separator();
-    }
+    logger_print_separator();
 
     return result;
 }
 
 int logger_warning(const char* format, ...) {
-    if (log_level > LOGGER_LEVEL_WARNING) {
+    if (log_level > LOGGER_LEVEL_WARN) {
         return 0;
     }
 
-    if (!logger_inside_block) {
-        logger_print_prompt("WARNING");
-    }
+    logger_print_prompt("WARN");
 
     va_list args;
     va_start(args, format);
     int result = logger_print_information(format, args);
     va_end(args);
 
-    if (!logger_inside_block) {
-        logger_print_separator();
-    }
-
-    return result;
-}
-
-int logger_warning_lf(const char* file, int line, const char* format, ...) {
-    if (log_level > LOGGER_LEVEL_WARNING) {
-        return 0;
-    }
-
-    if (!logger_inside_block) {
-        logger_print_prompt_lf(file, line, "WARNING");
-    }
-    
-    va_list args;
-    va_start(args, format);
-    int result = logger_print_information(format, args);
-    va_end(args);
-
-    if (!logger_inside_block) {
-        logger_print_separator();
-    }
+    logger_print_separator();
 
     return result;
 }
@@ -221,39 +187,14 @@ int logger_error(const char* format, ...) {
         return 0;
     }
 
-    if (!logger_inside_block) {
-        logger_print_prompt("ERROR");
-    }
+    logger_print_prompt("ERROR");
 
     va_list args;
     va_start(args, format);
     int result = logger_print_information(format, args);
     va_end(args);
 
-    if (!logger_inside_block) {
-        logger_print_separator();
-    }
-
-    return result;
-}
-
-int logger_error_lf(const char* file, int line, const char* format, ...) {
-    if (log_level > LOGGER_LEVEL_ERROR) {
-        return 0;
-    }
-
-    if (!logger_inside_block) {
-        logger_print_prompt_lf(file, line, "ERROR");
-    }
-    
-    va_list args;
-    va_start(args, format);
-    int result = logger_print_information(format, args);
-    va_end(args);
-
-    if (!logger_inside_block) {
-        logger_print_separator();
-    }
+    logger_print_separator();
 
     return result;
 }
@@ -263,39 +204,14 @@ int logger_fatal(const char* format, ...) {
         return 0;
     }
 
-    if (!logger_inside_block) {
-        logger_print_prompt("FATAL");
-    }
+    logger_print_prompt("FATAL");
 
     va_list args;
     va_start(args, format);
     int result = logger_print_information(format, args);
     va_end(args);
 
-    if (!logger_inside_block) {
-        logger_print_separator();
-    }
+    logger_print_separator();
 
-    return result;
-}
-
-int logger_fatal_lf(const char* file, int line, const char* format, ...) {
-    if (log_level > LOGGER_LEVEL_FATAL) {
-        return 0;
-    }
-
-    if (!logger_inside_block) {
-        logger_print_prompt_lf(file, line, "FATAL");
-    }
-    
-    va_list args;
-    va_start(args, format);
-    int result = logger_print_information(format, args);
-    va_end(args);
-
-    if (!logger_inside_block) {
-        logger_print_separator();
-    }
-
-    return result;
+    exit(EXIT_FAILURE);
 }
