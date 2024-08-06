@@ -20,7 +20,7 @@ void logger_end_block(void);
 
 int logger_debug(const char* format, ...);
 int logger_trace(const char* file, int line);
-int logger_assert(bool expr, const char* format, ...);
+int logger_assert(const char* strexpr, bool expr, const char* format, ...)
 
 int logger_info(const char* format, ...);
 int logger_warning(const char* format, ...);
@@ -28,5 +28,6 @@ int logger_error(const char* format, ...);
 int logger_fatal(const char* format, ...);
 
 #define LOGGER_TRACE() (logger_trace(__FILE__, __LINE__))
+#define LOGGER_ASSERT(expr, format, ...) (logger_assert(#expr, expr, format, ##__VA_ARGS__))
 
 #endif // LOGGER_H

@@ -120,7 +120,7 @@ int logger_trace(const char* file, int line) {
     return result;
 }
 
-int logger_assert(bool expr, const char* format, ...) {
+int logger_assert(const char* strexpr, bool expr, const char* format, ...) {
     if (log_level > LOGGER_LEVEL_DEBUG) {
         return 0;
     }
@@ -137,7 +137,10 @@ int logger_assert(bool expr, const char* format, ...) {
     
     va_list args;
     va_start(args, format);
-    int result = logger_print_information(format, args);
+    int result = fprintf(log_file, "'%s' is false\n", strexpr);
+    if (format != NULL) {
+        result += logger_print_information(format, args);
+    }
     va_end(args);
 
     logger_print_separator();
