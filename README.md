@@ -1,4 +1,4 @@
-# Carmelos (Garden Of Secrets)
+<!-- # Carmelos (Garden Of Secrets)
 
 **Carmelos** (from "Carmel", meaning "garden") is a secure, encrypted note-taking and secret diary application. It features a text-based ncurses interface and operates with a server-client architecture, enabling multiple users to connect to a single server. Each user's data is encrypted for privacy and security
 
@@ -41,4 +41,8 @@ In a world where privacy is increasingly at risk, we created **Carmelos** to off
 
 
 ## License
-This project is licensed under the MIT License. Please see the LICENSE file for details
+This project is licensed under the MIT License. Please see the LICENSE file for details -->
+
+### ATTENTION: This project is still under development and is not yet ready for use. Please check back later for updates.
+
+We decided to rewrite this project - for better readability and maintainability. The new repository will be available soon.

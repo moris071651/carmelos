@@ -57,6 +57,7 @@ bin/*
 build/*
 .vscode/
 .github/
+server-old/
 
 # Configuration Data
 .env
