@@ -3,7 +3,7 @@ package cryptography
 import (
 	"crypto/sha256"
 
-	datastructures "github.com/moris071651/carmelos/src/server/internal/Data_structures"
+	datastructures "carmelos/src/server/internal/Data_structures"
 )
 
 // global variable
