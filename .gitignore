@@ -44,7 +44,6 @@
 *.pdb
 
 # Kernel Module Compile Results
-*.mod*
 *.cmd
 .tmp_versions/
 modules.order
@@ -56,7 +55,6 @@ dkms.conf
 bin/*
 build/*
 .vscode/
-.github/
 server-old/
 
 # Configuration Data
